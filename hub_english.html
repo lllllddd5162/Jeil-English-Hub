@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>제일학원 영어 허브</title>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0a0e1a;--surface:#111827;--surface2:#1a2332;--border:#1e2d45;
+  --accent:#3b82f6;--accent2:#6366f1;--green:#22c55e;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#475569;--card-radius:20px;
+}
+body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(59,130,246,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:32px 20px 80px;}
+
+/* HEADER */
+.header{text-align:center;padding:48px 0 40px;}
+.header-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:100px;padding:6px 16px;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;margin-bottom:20px;}
+.header h1{font-size:clamp(28px,5vw,48px);font-weight:900;line-height:1.1;letter-spacing:-.02em;margin-bottom:12px;}
+.header h1 span{background:linear-gradient(135deg,#3b82f6,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.header p{color:var(--text2);font-size:15px;}
+
+/* LOADING */
+.loading{text-align:center;padding:60px;color:var(--text2);font-size:14px;}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* MODE TABS */
+.mode-tabs{display:flex;gap:8px;justify-content:center;margin-bottom:32px;flex-wrap:wrap;}
+.mode-tab{padding:10px 24px;border-radius:100px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;}
+.mode-tab:hover{border-color:var(--accent);color:var(--text);}
+.mode-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 20px rgba(59,130,246,.35);}
+.mode-tab .dot{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.6;}
+.mode-panel{display:none;}.mode-panel.active{display:block;}
+
+/* 선생님 선택 */
+.box{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);padding:20px 24px;margin-bottom:24px;}
+.section-label{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;}
+.teacher-btns{display:flex;flex-wrap:wrap;gap:8px;}
+.teacher-btn{padding:8px 18px;border-radius:100px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;}
+.teacher-btn:hover{border-color:var(--accent2);color:var(--text);}
+.teacher-btn.active{background:var(--accent2);border-color:var(--accent2);color:#fff;}
+
+/* SORT BAR */
+.sort-bar{display:flex;align-items:center;gap:10px;margin-bottom:24px;flex-wrap:wrap;}
+.sort-bar .lbl{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;}
+.sort-btn{padding:6px 16px;border-radius:100px;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;}
+.sort-btn:hover{border-color:var(--accent);color:var(--text);}
+.sort-btn.active{background:rgba(59,130,246,.15);border-color:var(--accent);color:var(--accent);}
+.edit-btn{margin-left:auto;padding:6px 16px;border-radius:100px;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;}
+.edit-btn:hover{border-color:var(--accent);color:var(--text);}
+.edit-btn.on{background:rgba(59,130,246,.15);border-color:var(--accent);color:var(--accent);}
+
+/* GROUP */
+.group-section{margin-bottom:32px;}
+.group-label{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:14px;padding-left:4px;display:flex;align-items:center;gap:8px;}
+.group-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* CARDS */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);padding:18px 20px;transition:all .25s;position:relative;overflow:hidden;}
+.card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(59,130,246,.06),rgba(99,102,241,.03));opacity:0;transition:opacity .25s;}
+.card:hover{border-color:rgba(59,130,246,.4);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4);}
+.card:hover::before{opacity:1;}
+.card-school{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;}
+.card-name{font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.01em;}
+.card-teacher-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;min-height:24px;}
+.card-teacher{font-size:12px;color:var(--text2);}
+.teacher-select{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--text);font-size:12px;font-weight:700;font-family:'Pretendard',sans-serif;outline:none;cursor:pointer;}
+.teacher-select:focus{border-color:var(--accent);}
+.card-footer{display:flex;align-items:center;justify-content:space-between;}
+.card-grade{font-size:10px;font-weight:700;padding:3px 8px;border-radius:100px;background:rgba(59,130,246,.1);color:var(--accent);border:1px solid rgba(59,130,246,.2);}
+.card-go-btn{width:28px;height:28px;border-radius:50%;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:14px;transition:all .2s;cursor:pointer;flex-shrink:0;}
+.card:hover .card-go-btn{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+/* 마스터 코드 섹션 */
+.card-code-section{border-top:1px solid var(--border);padding-top:14px;margin-top:14px;}
+.card-code-row{display:flex;gap:8px;align-items:center;}
+.card-code-input{
+  flex:1;min-width:0;
+  background:var(--bg);border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;color:var(--text);
+  font-size:13px;font-weight:700;font-family:'Pretendard',sans-serif;
+  outline:none;transition:border-color .2s;letter-spacing:.06em;
+}
+.card-code-input:focus{border-color:var(--accent);}
+.card-code-input::placeholder{color:var(--text3);letter-spacing:0;font-weight:400;font-size:12px;}
+.card-code-btn{
+  padding:10px 14px;border-radius:10px;
+  background:var(--accent);border:none;color:#fff;
+  font-size:12px;font-weight:800;cursor:pointer;
+  white-space:nowrap;transition:all .2s;font-family:'Pretendard',sans-serif;
+  flex-shrink:0;
+}
+.card-code-btn:hover{background:#2563eb;}
+.card-saved-tag{font-size:10px;color:var(--green);font-weight:700;margin-top:8px;display:none;align-items:center;gap:4px;}
+.card-saved-tag.show{display:flex;}
+
+/* 선생님 관리 */
+.teacher-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.teacher-tag{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:100px;background:var(--surface2);border:1px solid var(--border);font-size:13px;font-weight:700;color:var(--text);}
+.teacher-tag-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;padding:0;transition:color .2s;}
+.teacher-tag-del:hover{color:#ef4444;}
+.add-row{display:flex;gap:8px;}
+.add-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-weight:700;font-family:'Pretendard',sans-serif;outline:none;transition:border-color .2s;}
+.add-input:focus{border-color:var(--accent);}
+.add-btn{padding:10px 18px;border-radius:10px;background:var(--accent);border:none;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:'Pretendard',sans-serif;transition:background .2s;}
+.add-btn:hover{background:#2563eb;}
+
+/* 모달 */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
+.modal-overlay.show{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:32px;width:320px;transform:scale(.95);transition:transform .25s;}
+.modal-overlay.show .modal{transform:scale(1);}
+.modal h3{font-size:16px;font-weight:800;margin-bottom:6px;}
+.modal p{font-size:13px;color:var(--text2);margin-bottom:20px;}
+.modal input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:12px 16px;color:var(--text);font-size:18px;font-weight:800;font-family:'Pretendard',sans-serif;outline:none;text-align:center;letter-spacing:.2em;margin-bottom:12px;transition:border-color .2s;}
+.modal input:focus{border-color:var(--accent);}
+.modal-btns{display:flex;gap:8px;}
+.modal-cancel{flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:14px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif;}
+.modal-confirm{flex:2;padding:12px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:'Pretendard',sans-serif;transition:background .2s;}
+.modal-confirm:hover{background:#2563eb;}
+
+.no-cards{text-align:center;padding:48px;color:var(--text3);font-size:14px;}
+.footer{text-align:center;padding:40px 0 0;color:var(--text3);font-size:12px;line-height:2;}
+@media(max-width:600px){.cards{grid-template-columns:1fr 1fr;}.mode-tab{padding:8px 16px;font-size:12px;}}
+@media(max-width:400px){.cards{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="header-badge">🎓 제일학원</div>
+    <h1>영어 <span>허브 사이트</span></h1>
+    <p>모든 반의 영어 학습 관리 시스템에 접속하세요</p>
+  </div>
+
+  <div id="loading" class="loading"><div class="spinner"></div>데이터 불러오는 중...</div>
+  <div id="main" style="display:none;">
+    <div class="mode-tabs">
+      <div class="mode-tab active" onclick="setMode('manager')" id="tab-manager"><span class="dot"></span>실장용</div>
+      <div class="mode-tab" onclick="setMode('teacher')" id="tab-teacher"><span class="dot"></span>담당 선생님용</div>
+      <div class="mode-tab" onclick="setMode('master')" id="tab-master"><span class="dot"></span>마스터용</div>
+    </div>
+
+    <!-- 실장용 -->
+    <div class="mode-panel active" id="panel-manager">
+      <div class="sort-bar">
+        <span class="lbl">분류</span>
+        <div class="sort-btn active" onclick="setSort('manager','grade',this)">학년별</div>
+        <div class="sort-btn" onclick="setSort('manager','teacher',this)">선생님별</div>
+      </div>
+      <div id="manager-cards"></div>
+    </div>
+
+    <!-- 담당 선생님용 -->
+    <div class="mode-panel" id="panel-teacher">
+      <div class="box">
+        <div class="section-label">선생님 선택</div>
+        <div class="teacher-btns" id="teacher-btns"></div>
+      </div>
+      <div class="sort-bar">
+        <span class="lbl">분류</span>
+        <div class="sort-btn active" onclick="setSort('teacher','grade',this)">학년별</div>
+        <div class="sort-btn" onclick="setSort('teacher','teacher',this)">선생님별</div>
+      </div>
+      <div id="teacher-cards"></div>
+    </div>
+
+    <!-- 마스터용 -->
+    <div class="mode-panel" id="panel-master">
+      <div class="box" id="manage-panel" style="display:none;">
+        <div class="section-label">선생님 관리</div>
+        <div class="teacher-list" id="teacher-manage-list"></div>
+        <div class="add-row">
+          <input class="add-input" id="add-teacher-input" placeholder="선생님 이름 입력" maxlength="10"
+            onkeydown="if(event.key==='Enter')addTeacher()"/>
+          <button class="add-btn" onclick="addTeacher()">추가</button>
+        </div>
+      </div>
+      <div class="sort-bar">
+        <span class="lbl">분류</span>
+        <div class="sort-btn active" onclick="setSort('master','grade',this)">학년별</div>
+        <div class="sort-btn" onclick="setSort('master','teacher',this)">선생님별</div>
+        <div class="edit-btn" id="edit-toggle" onclick="toggleEdit()">✏️ 편집</div>
+      </div>
+      <div id="master-cards"></div>
+    </div>
+  </div>
+  <div class="footer">제일학원 영어 LMS · 선생님 코드: 26350</div>
+</div>
+
+<!-- 코드 입력 모달 -->
+<div class="modal-overlay" id="code-modal">
+  <div class="modal">
+    <h3 id="modal-title"></h3>
+    <p>마스터 코드를 입력하세요</p>
+    <input type="password" id="modal-input" placeholder="코드 입력" maxlength="20"
+      onkeydown="if(event.key==='Enter')modalConfirm()"/>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">취소</button>
+      <button class="modal-confirm" onclick="modalConfirm()">접속 →</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const FB = {apiKey:"AIzaSyBaWWriu3X7iVQnglR5XcA0Mqqc736VopM",authDomain:"science-academy-13dda.firebaseapp.com",projectId:"science-academy-13dda",storageBucket:"science-academy-13dda.firebasestorage.app",messagingSenderId:"449626746191",appId:"1:449626746191:web:73885c6bb862a07655293a"};
+const app = initializeApp(FB);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const HUB_DOC = doc(db,'artifacts','Jeil-english-hub','public','data','settings','config');
+const BASE_URL = 'https://lllllddd5162.github.io/';
+const TEACHER_CODE = '26350';
+
+const DEFAULT_CLASSES = [
+  {name:'성동고 1S반',school:'성동고',grade:1,teacher:'박동혁',appId:'Jeil-english-Seongdong-grade1S',order:0},
+  {name:'성동고 1H반',school:'성동고',grade:1,teacher:'최주성',appId:'Jeil-english-Seongdong-grade1H',order:1},
+  {name:'성동고 2S반',school:'성동고',grade:2,teacher:'박동혁',appId:'Jeil-english-Seongdong-grade2S',order:2},
+  {name:'성동고 2H반',school:'성동고',grade:2,teacher:'장지호',appId:'Jeil-english-Seongdong-grade2H',order:3},
+  {name:'성동고 3S반',school:'성동고',grade:3,teacher:'장지호',appId:'Jeil-english-Seongdong-grade3S',order:4},
+  {name:'성동고 3H반',school:'성동고',grade:3,teacher:'장지호',appId:'Jeil-english-Seongdong-grade3H',order:5},
+  {name:'성수고 1학년',school:'성수고',grade:1,teacher:'박민우',appId:'Jeil-english-Seongsoo-grade1',order:6},
+  {name:'성수고 2학년',school:'성수고',grade:2,teacher:'박동혁',appId:'Jeil-english-Seongsoo-grade2',order:7},
+  {name:'성수고 3학년',school:'성수고',grade:3,teacher:'신채리',appId:'Jeil-english-Seongsoo-grade3',order:8},
+  {name:'금호고 1학년',school:'금호고',grade:1,teacher:'박동혁',appId:'Jeil-english-Geumo-grade1',order:9},
+  {name:'금호고 2학년',school:'금호고',grade:2,teacher:'이성규',appId:'Jeil-english-Geumo-grade2',order:10},
+  {name:'금호고 3학년',school:'금호고',grade:3,teacher:'장지호',appId:'Jeil-english-Geumo-grade3',order:11},
+  {name:'도선고 1학년',school:'도선고',grade:1,teacher:'최주성',appId:'Jeil-english-Dosun-grade1',order:12},
+  {name:'도선고 2학년',school:'도선고',grade:2,teacher:'박민우',appId:'Jeil-english-Dosun-grade2',order:13},
+  {name:'도선고 3학년',school:'도선고',grade:3,teacher:'신채리',appId:'Jeil-english-Dosun-grade3',order:14},
+  {name:'무학여고 1학년',school:'무학여고',grade:1,teacher:'이성규',appId:'Jeil-english-Muhak-grade1',order:15},
+  {name:'무학여고 2학년',school:'무학여고',grade:2,teacher:'박민우',appId:'Jeil-english-Muhak-grade2',order:16},
+  {name:'경일고 1학년',school:'경일고',grade:1,teacher:'이성규',appId:'Jeil-english-Kyungil-grade1',order:17},
+];
+const DEFAULT_TEACHERS = ['박동혁','박민우','신채리','이성규','장지호','최주성'];
+
+let CLASSES=[], TEACHERS=[], masterCodes={};
+let currentMode='manager', sortState={manager:'grade',teacher:'grade',master:'grade'};
+let selectedTeacher=null, editMode=false, modalTarget=null;
+
+async function save() {
+  await setDoc(HUB_DOC,{classes:CLASSES,teachers:TEACHERS,masterCodes},{merge:true});
+}
+
+// SORT
+function sortList(list, type) {
+  return [...list].sort((a,b) => {
+    if (type==='grade') {
+      if (a.grade!==b.grade) return a.grade-b.grade;
+      const sc=a.school.localeCompare(b.school,'ko');
+      if (sc!==0) return sc;
+      // S → H → 숫자만 순서
+      const rank=s=>s.includes('S')?0:s.includes('H')?1:2;
+      return rank(a.name)-rank(b.name);
+    } else {
+      const tc=a.teacher.localeCompare(b.teacher,'ko');
+      if (tc!==0) return tc;
+      return a.grade-b.grade||a.school.localeCompare(b.school,'ko');
+    }
+  });
+}
+
+function groupBy(list, type) {
+  const res={};
+  if (type==='grade') {
+    [1,2,3].forEach(g=>{
+      const items=sortList(list.filter(c=>c.grade===g),type);
+      if(items.length) res[g+'학년']=items;
+    });
+  } else {
+    [...new Set(list.map(c=>c.teacher))].sort((a,b)=>a.localeCompare(b,'ko')).forEach(t=>{
+      const items=sortList(list.filter(c=>c.teacher===t),type);
+      if(items.length) res[t+' 선생님']=items;
+    });
+  }
+  return res;
+}
+
+// RENDER
+window.setMode=function(mode){
+  currentMode=mode;
+  document.querySelectorAll('.mode-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+mode).classList.add('active');
+  document.querySelectorAll('.mode-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+mode).classList.add('active');
+  renderAll();
+};
+window.setSort=function(mode,type,el){
+  sortState[mode]=type;
+  el.closest('.sort-bar').querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderAll();
+};
+window.selectTeacher=function(name,el){
+  selectedTeacher=selectedTeacher===name?null:name;
+  document.querySelectorAll('#teacher-btns .teacher-btn').forEach(b=>b.classList.remove('active'));
+  if(selectedTeacher) el.classList.add('active');
+  renderAll();
+};
+window.toggleEdit=function(){
+  editMode=!editMode;
+  const btn=document.getElementById('edit-toggle');
+  btn.textContent=editMode?'✅ 완료':'✏️ 편집';
+  btn.classList.toggle('on',editMode);
+  document.getElementById('manage-panel').style.display=editMode?'block':'none';
+  renderMaster();
+};
+
+function cardHTML(c,mode){
+  const teacherRow=editMode&&mode==='master'
+    ?`<select class="teacher-select" onchange="changeTeacher('${c.appId}',this.value)">${TEACHERS.map(t=>`<option${t===c.teacher?' selected':''}>${t}</option>`).join('')}</select>`
+    :`<span class="card-teacher">${c.teacher} 선생님</span>`;
+
+  const clickable=mode!=='master';
+  const clickAttr=mode==='manager'
+    ?`onclick="openSite('${BASE_URL}${c.appId}/?code=${TEACHER_CODE}')"`
+    :mode==='teacher'?`onclick="openTeacherCard('${c.appId}','${c.name}')"`:'';
+
+  const footer=mode==='manager'
+    ?`<div class="card-footer"><div class="card-grade">${c.grade}학년</div><div class="card-go-btn">→</div></div>`
+    :mode==='teacher'
+    ?`<div class="card-footer"><div class="card-grade">${c.grade}학년</div><div class="card-go-btn">→</div></div>`
+    :`<div class="card-footer"><div class="card-grade">${c.grade}학년</div></div>`;
+
+  const codeSection=mode==='master'?`
+    <div class="card-code-section">
+      <div class="card-code-row">
+        <input class="card-code-input" type="password" id="code-${c.appId}"
+          placeholder="마스터 코드 입력"
+          value="${masterCodes[c.appId]||''}"
+          maxlength="20"
+          onkeydown="if(event.key==='Enter')masterGo('${c.appId}')"/>
+        <button class="card-code-btn" onclick="masterGo('${c.appId}')">접속 →</button>
+      </div>
+      <div class="card-saved-tag${masterCodes[c.appId]?' show':''}" id="saved-${c.appId}">✓ 코드 저장됨</div>
+    </div>`:'';
+
+  return `<div class="card" ${clickAttr}>
+    <div class="card-school">${c.school}</div>
+    <div class="card-name">${c.name}</div>
+    <div class="card-teacher-row">${teacherRow}</div>
+    ${footer}
+    ${codeSection}
+  </div>`;
+}
+
+function renderGroups(list,mode,containerId){
+  const el=document.getElementById(containerId);
+  const groups=groupBy(list,sortState[mode]);
+  if(!Object.keys(groups).length){el.innerHTML='<div class="no-cards">표시할 반이 없습니다.</div>';return;}
+  el.innerHTML=Object.entries(groups).map(([label,items])=>`
+    <div class="group-section">
+      <div class="group-label">${label}</div>
+      <div class="cards">${items.map(c=>cardHTML(c,mode)).join('')}</div>
+    </div>`).join('');
+}
+
+function renderManager(){renderGroups(CLASSES,'manager','manager-cards');}
+function renderTeacher(){
+  document.getElementById('teacher-btns').innerHTML=
+    TEACHERS.map(t=>`<div class="teacher-btn${selectedTeacher===t?' active':''}" onclick="selectTeacher('${t}',this)">${t}</div>`).join('');
+  const list=selectedTeacher?CLASSES.filter(c=>c.teacher===selectedTeacher):CLASSES;
+  renderGroups(list,'teacher','teacher-cards');
+}
+function renderMaster(){
+  document.getElementById('teacher-manage-list').innerHTML=
+    TEACHERS.map(t=>`<div class="teacher-tag">${t}<button class="teacher-tag-del" onclick="deleteTeacher('${t}')">×</button></div>`).join('');
+  renderGroups(CLASSES,'master','master-cards');
+}
+function renderAll(){renderManager();renderTeacher();renderMaster();}
+
+// ACTIONS
+window.openSite=function(url){window.open(url,'_blank');};
+
+window.masterGo=function(appId){
+  const input=document.getElementById('code-'+appId);
+  const code=input?input.value.trim():'';
+  if(!code){if(input)input.focus();return;}
+  masterCodes[appId]=code;
+  save();
+  const saved=document.getElementById('saved-'+appId);
+  if(saved) saved.classList.add('show');
+  window.open(BASE_URL+appId+'/?code='+code,'_blank');
+};
+
+window.openTeacherCard=function(appId,name){
+  modalTarget=appId;
+  document.getElementById('modal-title').textContent=name;
+  document.getElementById('modal-input').value=masterCodes[appId]||'';
+  document.getElementById('code-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('modal-input').focus(),100);
+};
+window.closeModal=function(){
+  document.getElementById('code-modal').classList.remove('show');
+  modalTarget=null;
+};
+window.modalConfirm=function(){
+  const code=document.getElementById('modal-input').value.trim();
+  if(!code||!modalTarget) return;
+  masterCodes[modalTarget]=code;
+  save();
+  window.open(BASE_URL+modalTarget+'/?code='+code,'_blank');
+  closeModal();
+};
+
+window.changeTeacher=async function(appId,newTeacher){
+  const idx=CLASSES.findIndex(c=>c.appId===appId);
+  if(idx<0) return;
+  CLASSES[idx]={...CLASSES[idx],teacher:newTeacher};
+  await save();
+};
+window.addTeacher=async function(){
+  const input=document.getElementById('add-teacher-input');
+  const name=input.value.trim();
+  if(!name||TEACHERS.includes(name)){input.focus();return;}
+  TEACHERS=[...TEACHERS,name].sort((a,b)=>a.localeCompare(b,'ko'));
+  await save();
+  input.value='';
+};
+window.deleteTeacher=async function(name){
+  if(!confirm(`"${name}" 선생님을 삭제할까요?`)) return;
+  TEACHERS=TEACHERS.filter(t=>t!==name);
+  await save();
+};
+
+document.getElementById('code-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+// INIT
+signInAnonymously(auth).then(()=>{
+  onSnapshot(HUB_DOC,snap=>{
+    if(snap.exists()){
+      const d=snap.data();
+      CLASSES=d.classes||DEFAULT_CLASSES;
+      TEACHERS=d.teachers||DEFAULT_TEACHERS;
+      masterCodes=d.masterCodes||{};
+    } else {
+      CLASSES=DEFAULT_CLASSES;
+      TEACHERS=DEFAULT_TEACHERS;
+      masterCodes={};
+    }
+    document.getElementById('loading').style.display='none';
+    document.getElementById('main').style.display='block';
+    renderAll();
+  });
+});
+</script>
+</body>
+</html>
