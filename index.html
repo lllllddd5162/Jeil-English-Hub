@@ -656,16 +656,61 @@ var dataModalMode = 'progress'; // 'progress' | 'scores'
 var dataSelectedClass = null;
 
 // 반 목록 렌더
+var dataClassFilter = 'all'; // 'all' | school | grade | teacher value
+
 function renderDataClassList() {
   var el = document.getElementById('data-class-list');
-  var html = '';
-  CLASSES.forEach(function(c) {
+
+  // 필터 옵션 수집
+  var schools = []; var grades = []; var teachers = [];
+  CLASSES.forEach(function(c){
+    if(schools.indexOf(c.school)<0) schools.push(c.school);
+    if(grades.indexOf(c.grade)<0) grades.push(c.grade);
+    if(teachers.indexOf(c.teacher)<0) teachers.push(c.teacher);
+  });
+  schools.sort(function(a,b){return a.localeCompare(b,'ko');});
+  grades.sort();
+  teachers.sort(function(a,b){return a.localeCompare(b,'ko');});
+
+  // 필터 UI
+  var html = '<div style="margin-bottom:8px;padding:0 4px;">' +
+    '<div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:6px;letter-spacing:.08em;">분류</div>' +
+    '<select id="class-filter-sel" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text);font-size:11px;font-weight:700;outline:none;">' +
+    '<option value="all">전체</option>';
+  schools.forEach(function(s){ html += '<option value="school:'+s+'" '+(dataClassFilter==='school:'+s?'selected':'')+'>🏫 '+s+'</option>'; });
+  grades.forEach(function(g){ html += '<option value="grade:'+g+'" '+(dataClassFilter==='grade:'+g?'selected':'')+'>📚 '+g+'학년</option>'; });
+  teachers.forEach(function(t){ html += '<option value="teacher:'+t+'" '+(dataClassFilter==='teacher:'+t?'selected':'')+'>👤 '+t+'</option>'; });
+  html += '</select></div>';
+
+  // 필터 적용
+  var filtered = CLASSES.filter(function(c){
+    if (dataClassFilter==='all') return true;
+    var parts = dataClassFilter.split(':');
+    if (parts[0]==='school') return c.school===parts[1];
+    if (parts[0]==='grade') return c.grade===parseInt(parts[1]);
+    if (parts[0]==='teacher') return c.teacher===parts[1];
+    return true;
+  });
+
+  filtered.forEach(function(c) {
     html += '<div class="data-class-item'+(dataSelectedClass && dataSelectedClass.appId===c.appId?' active':'')+'" data-appid="'+c.appId+'">' +
       '<div class="item-school">'+c.school+'</div>' +
       c.name +
     '</div>';
   });
   el.innerHTML = html;
+
+  // 셀렉트 이벤트
+  var sel = document.getElementById('class-filter-sel');
+  if (sel) {
+    sel.value = dataClassFilter;
+    sel.addEventListener('change', function(){
+      dataClassFilter = this.value;
+      dataSelectedClass = null;
+      document.getElementById('data-content').innerHTML = '<div class="data-empty">반을 선택하세요</div>';
+      renderDataClassList();
+    });
+  }
 }
 
 // Firebase에서 반 데이터 로드
@@ -715,6 +760,7 @@ function loadClassData(c) {
 }
 
 function renderProgressData(plans, c) {
+  _cachedProgress = {plans:plans, c:c};
   var content = document.getElementById('data-content');
   if (!plans.length) { content.innerHTML = '<div class="data-empty">등록된 진도 계획이 없습니다.</div>'; return; }
 
@@ -755,7 +801,30 @@ function renderProgressData(plans, c) {
     if (p.done) subjectMap[sub].done++;
   });
 
-  var html = '<h3 style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:12px;">'+c.name+' 진도 현황</h3>';
+  // 과목 필터
+  var allSubjects = [];
+  jinDo.forEach(function(p){ var s=p.subject||'미분류'; if(allSubjects.indexOf(s)<0) allSubjects.push(s); });
+  var contentEl2 = document.getElementById('data-content');
+  var activeSub = contentEl2.dataset.subFilter || 'all';
+  var filteredJinDo = activeSub==='all' ? jinDo : jinDo.filter(function(p){return (p.subject||'미분류')===activeSub;});
+  var filteredPlans = activeSub==='all' ? plans : plans.filter(function(p){return (p.subject||'미분류')===activeSub;});
+
+  var html = '<h3 style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:10px;">'+c.name+' 진도 현황</h3>';
+
+  // 과목 필터 탭
+  if (allSubjects.length > 1) {
+    html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">';
+    ['all'].concat(allSubjects).forEach(function(sub){
+      var active = activeSub===sub;
+      html += '<button onclick="progressSubFilter(''+sub+'')" style="padding:5px 14px;border-radius:100px;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'rgba(59,130,246,.15)':'var(--surface2)')+';color:'+(active?'var(--accent)':'var(--text2)')+';font-size:11px;font-weight:700;cursor:pointer;">'+(sub==='all'?'전체':sub)+'</button>';
+    });
+    html += '</div>';
+  }
+
+  // 필터 적용된 통계 재계산
+  var done = filteredJinDo.filter(function(p){return p.done;}).length;
+  var remaining = filteredJinDo.length - done;
+  var pct = filteredJinDo.length ? Math.round(done/filteredJinDo.length*100) : 0;
 
   // 전체 진도율 + 종료 예상일
   html += '<div class="progress-overall" style="flex-wrap:wrap;gap:12px;">' +
@@ -789,7 +858,7 @@ function renderProgressData(plans, c) {
   }
 
   // 최근 진도 목록 - 모바일 친화적
-  var sorted = plans.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+  var sorted = filteredPlans.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
   html += '<p style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">수업 기록</p>';
   html += '<div class="plan-list">';
   sorted.slice(0,30).forEach(function(p){
@@ -805,50 +874,119 @@ function renderProgressData(plans, c) {
   content.innerHTML = html;
 }
 
+var _cachedProgress = null;
+
+function progressSubFilter(sub) {
+  var el = document.getElementById('data-content');
+  el.dataset.subFilter = sub;
+  if (_cachedProgress) renderProgressData(_cachedProgress.plans, _cachedProgress.c);
+}
+
+// 열린 시험 카드 ID
+var openTestId = null;
+var _cachedScores = null;
+
+function scoreTypeFilter(type) {
+  var el = document.getElementById('data-content');
+  el.dataset.typeFilter = type;
+  if (_cachedScores) renderScoresData(_cachedScores.tests, _cachedScores.students, _cachedScores.scores, _cachedScores.c);
+}
+
+function toggleTestCard(tid) {
+  openTestId = openTestId === tid ? null : tid;
+  if (_cachedScores) renderScoresData(_cachedScores.tests, _cachedScores.students, _cachedScores.scores, _cachedScores.c);
+}
+
 function renderScoresData(tests, students, scores, c) {
-  var content = document.getElementById('data-content');
-  if (!tests.length) { content.innerHTML = '<div class="data-empty">등록된 시험이 없습니다.</div>'; return; }
+  var el = document.getElementById('data-content');
+  if (!tests.length) { el.innerHTML = '<div class="data-empty">등록된 시험이 없습니다.</div>'; return; }
+  _cachedScores = {tests:tests, students:students, scores:scores, c:c};
 
   var sortedStudents = students.slice().sort(function(a,b){ return (a.sortOrder||0)-(b.sortOrder||0)||a.name.localeCompare(b.name,'ko'); });
-  var sortedTests = tests.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+  var sortedTests = tests.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
 
-  var html = '<h3 style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:12px;">'+c.name+' 시험 성적표</h3>';
+  var types = [];
+  sortedTests.forEach(function(t){ var tp=t.testType||'중간 테스트'; if(types.indexOf(tp)<0) types.push(tp); });
+  var activeType = el.dataset.typeFilter || 'all';
+  var filteredTests = activeType==='all' ? sortedTests : sortedTests.filter(function(t){ return (t.testType||'중간 테스트')===activeType; });
 
-  // 모바일: 학생별 카드형 / 데스크탑: 테이블형
-  html += '<div class="score-mobile-cards">';
-  sortedStudents.forEach(function(s){
-    html += '<div style="background:var(--surface2);border-radius:14px;padding:14px 16px;margin-bottom:10px;">' +
-      '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;">'+s.name+'</div>' +
-      '<div style="display:flex;flex-direction:column;gap:6px;">';
-    sortedTests.forEach(function(t){
-      var key = s.id+'-'+t.id;
-      var res = scores[key]||{};
-      var scoreStr = '';
-      if (res.absent==='absent') {
-        scoreStr = '<span style="color:#ef4444;font-weight:800;">결시</span>';
-      } else if (res.absent==='excluded') {
-        scoreStr = '<span style="color:var(--text3);">-</span>';
-      } else if (res.score!=null) {
-        var pct = t.maxScore ? Math.round(parseFloat(res.score)/t.maxScore*100) : null;
-        scoreStr = '<span style="font-weight:900;color:var(--text);">'+res.score+'점</span>'+
-          (t.maxScore?'<span style="font-size:10px;color:var(--text3);"> /'+t.maxScore+'점</span>':'')+
-          (pct!=null?' <span style="font-size:10px;color:var(--accent);">('+pct+'%)</span>':'');
-      } else {
-        scoreStr = '<span style="color:var(--text3);font-size:11px;">미입력</span>';
-      }
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">' +
-        '<div>' +
-          '<div style="font-size:11px;font-weight:800;color:var(--text2);">'+t.title+'</div>' +
-          '<div style="font-size:10px;color:var(--text3);">'+t.date+(t.maxScore?' · 만점 '+t.maxScore+'점':'')+'</div>' +
-        '</div>' +
-        '<div style="text-align:right;">'+scoreStr+'</div>' +
-      '</div>';
-    });
-    html += '</div></div>';
+  var html = '<h3 style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:10px;">'+c.name+' 시험 성적표</h3>';
+
+  // 시험 유형 필터
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">';
+  ['all'].concat(types).forEach(function(tp){
+    var active = activeType===tp;
+    html += '<button onclick="scoreTypeFilter(''+tp+'')" style="padding:5px 14px;border-radius:100px;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'rgba(59,130,246,.15)':'var(--surface2)')+';color:'+(active?'var(--accent)':'var(--text2)')+';font-size:11px;font-weight:700;cursor:pointer;">'+(tp==='all'?'전체':tp)+'</button>';
   });
   html += '</div>';
 
-  content.innerHTML = html;
+  if (!filteredTests.length) { el.innerHTML = html + '<div class="data-empty">해당 유형 시험 없음</div>'; return; }
+
+  filteredTests.forEach(function(t){
+    var validScores = sortedStudents.map(function(s){
+      var r=scores[s.id+'-'+t.id]||{};
+      return r.absent?null:(r.score!=null?parseFloat(r.score):null);
+    }).filter(function(v){return v!=null&&!isNaN(v);});
+    var avg = validScores.length ? validScores.reduce(function(a,b){return a+b;},0)/validScores.length : null;
+    var isOpen = openTestId===t.id;
+
+    html += '<div style="background:var(--surface2);border-radius:16px;margin-bottom:10px;overflow:hidden;">';
+    // 헤더
+    html += '<div onclick="toggleTestCard(''+t.id+'')" style="padding:14px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-size:14px;font-weight:800;color:var(--text);">'+t.title+'</div>' +
+        '<div style="font-size:10px;color:var(--text3);margin-top:2px;">'+t.date+(t.maxScore?' · 만점 '+t.maxScore+'점':'')+(t.testType?' · '+t.testType:'')+'</div>' +
+        '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-top:3px;">반 평균 '+(avg!=null?avg.toFixed(1)+'점':'데이터 없음')+(validScores.length?' · '+validScores.length+'명':'')+'</div>' +
+      '</div>' +
+      '<span style="color:var(--text3);font-size:16px;flex-shrink:0;">'+(isOpen?'▲':'▼')+'</span>' +
+    '</div>';
+
+    if (isOpen) {
+      var sortedByScore = sortedStudents.filter(function(s){
+        var r=scores[s.id+'-'+t.id]||{};
+        return !r.absent&&r.score!=null&&!isNaN(parseFloat(r.score));
+      }).slice().sort(function(a,b){
+        return parseFloat(scores[b.id+'-'+t.id].score)-parseFloat(scores[a.id+'-'+t.id].score);
+      });
+
+      html += '<div style="border-top:1px solid var(--border);">';
+      sortedStudents.forEach(function(s){
+        var r=scores[s.id+'-'+t.id]||{};
+        var score = r.absent?null:(r.score!=null?parseFloat(r.score):null);
+        var rank = score!=null ? sortedByScore.findIndex(function(x){return x.id===s.id;})+1 : null;
+        var diff = (score!=null&&avg!=null) ? score-avg : null;
+        var pct = (score!=null&&t.maxScore) ? Math.round(score/parseFloat(t.maxScore)*100) : null;
+
+        html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);">';
+        // 등수 뱃지
+        if (rank) {
+          var rankBg = rank===1?'#f59e0b':rank===2?'#94a3b8':rank===3?'#b45309':'var(--surface)';
+          html += '<div style="width:26px;height:26px;border-radius:50%;background:'+rankBg+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#fff;flex-shrink:0;">'+rank+'</div>';
+        } else {
+          html += '<div style="width:26px;height:26px;flex-shrink:0;"></div>';
+        }
+        html += '<div style="flex:1;min-width:0;font-size:13px;font-weight:800;color:var(--text);">'+s.name+'</div>';
+
+        if (r.absent==='absent') {
+          html += '<span style="font-size:11px;font-weight:800;color:#ef4444;">결시</span>';
+        } else if (r.absent==='excluded') {
+          html += '<span style="font-size:11px;color:var(--text3);">비대상</span>';
+        } else if (score!=null) {
+          html += '<div style="text-align:right;">' +
+            '<div style="font-size:15px;font-weight:900;color:var(--text);">'+score+'점'+(pct!=null?' <span style="font-size:10px;color:var(--text3);">('+pct+'%)</span>':'')+'</div>' +
+            (diff!=null?'<div style="font-size:11px;font-weight:700;color:'+(diff>0?'#22c55e':diff<0?'#ef4444':'var(--text3)')+';">'+(diff>0?'+':'')+diff.toFixed(1)+'점 (평균 대비)</div>':'') +
+          '</div>';
+        } else {
+          html += '<span style="font-size:11px;color:var(--text3);">미입력</span>';
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+
+  el.innerHTML = html;
 }
 
 // 이벤트
