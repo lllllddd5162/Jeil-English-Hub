@@ -49,7 +49,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .group-label{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:14px;padding-left:4px;display:flex;align-items:center;gap:8px;}
 .group-label::after{content:'';flex:1;height:1px;background:var(--border);}
 
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;align-items:start;}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);padding:18px 20px;transition:border-color .25s,transform .25s,box-shadow .25s;overflow:visible;}
 .card.clickable{cursor:pointer;}
 .card.clickable:hover{border-color:rgba(59,130,246,.4);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4);}
@@ -380,6 +380,9 @@ function openPicker(appId) {
   var btn = document.querySelector('.t-picker-btn[data-appid="'+appId+'"]');
   var drop = document.getElementById('drop-'+appId);
   if (!btn || !drop) return;
+  // 해당 카드 z-index 올리기
+  var card = btn.closest('.card');
+  if (card) { card.style.zIndex = '100'; card.style.position = 'relative'; }
   drop.classList.add('open');
   btn.classList.add('open');
   openPickerAppId = appId;
@@ -387,6 +390,8 @@ function openPicker(appId) {
 function closeAllPickers() {
   document.querySelectorAll('.t-picker-dropdown').forEach(function(d){d.classList.remove('open');});
   document.querySelectorAll('.t-picker-btn').forEach(function(b){b.classList.remove('open');});
+  // 모든 카드 z-index 원복
+  document.querySelectorAll('#master-cards .card').forEach(function(c){c.style.zIndex='';});
   openPickerAppId = null;
 }
 
