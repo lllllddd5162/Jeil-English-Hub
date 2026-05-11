@@ -738,8 +738,10 @@ function watchScores() {
               var tests = testSnap.docs.map(function(d) { return {id: d.id, title: d.data().title || '', date: d.data().date || ''}; });
               if (!tests.length) return;
 
-              // 이미 알림 보낸 시험 추적 (세션 동안)
+              // 이미 알림 보낸 시험 추적 (localStorage 영구 저장)
+              var NOTIF_KEY = 'jeil_notified_' + cls.appId;
               var notifiedTests = {};
+              try { notifiedTests = JSON.parse(localStorage.getItem(NOTIF_KEY) || '{}'); } catch(e) {}
 
               // testScores 실시간 감지
               db.collection('artifacts/' + cls.appId + '/public/data/testScores')
@@ -761,6 +763,7 @@ function watchScores() {
 
                     if (completed.length === students.length) {
                       notifiedTests[t.id] = true;
+                      try { localStorage.setItem(NOTIF_KEY, JSON.stringify(notifiedTests)); } catch(e) {}
                       var validScores = students.map(function(sid) {
                         var r = scoreMap[sid + '-' + t.id] || {};
                         return r.absent ? null : (r.score != null ? parseFloat(r.score) : null);
