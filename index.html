@@ -564,6 +564,34 @@ document.getElementById('code-modal').addEventListener('click', function(e){
   if (e.target===this) closeModal();
 });
 
+// 데이터 모달 이벤트 위임 (진도/성적 필터 + 시험카드 토글)
+document.addEventListener('click', function(e) {
+  // 진도 과목 필터
+  var subBtn = e.target.closest('.prog-sub-btn');
+  if (subBtn) {
+    var el = document.getElementById('data-content');
+    el.dataset.subFilter = subBtn.dataset.sub;
+    if (_cachedProgress) renderProgressData(_cachedProgress.plans, _cachedProgress.c);
+    return;
+  }
+  // 시험 유형 필터
+  var typeBtn = e.target.closest('.score-type-btn');
+  if (typeBtn) {
+    var el = document.getElementById('data-content');
+    el.dataset.typeFilter = typeBtn.dataset.type;
+    if (_cachedScores) renderScoresData(_cachedScores.tests, _cachedScores.students, _cachedScores.scores, _cachedScores.c);
+    return;
+  }
+  // 시험 카드 토글
+  var testHeader = e.target.closest('.test-card-header');
+  if (testHeader) {
+    var tid = testHeader.dataset.tid;
+    openTestId = openTestId === tid ? null : tid;
+    if (_cachedScores) renderScoresData(_cachedScores.tests, _cachedScores.students, _cachedScores.scores, _cachedScores.c);
+    return;
+  }
+});
+
 // 전체 클릭 위임
 document.addEventListener('click', function(e){
 
@@ -658,6 +686,11 @@ var dataSelectedClass = null;
 // 반 목록 렌더
 var dataClassFilter = 'all'; // 'all' | school | grade | teacher value
 
+// 교집합 필터 상태
+var filterSchool = 'all';
+var filterGrade = 'all';
+var filterTeacher = 'all';
+
 function renderDataClassList() {
   var el = document.getElementById('data-class-list');
 
@@ -672,23 +705,33 @@ function renderDataClassList() {
   grades.sort();
   teachers.sort(function(a,b){return a.localeCompare(b,'ko');});
 
-  // 필터 UI
-  var html = '<div style="margin-bottom:8px;padding:0 4px;">' +
-    '<div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:6px;letter-spacing:.08em;">분류</div>' +
-    '<select id="class-filter-sel" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text);font-size:11px;font-weight:700;outline:none;">' +
-    '<option value="all">전체</option>';
-  schools.forEach(function(s){ html += '<option value="school:'+s+'" '+(dataClassFilter==='school:'+s?'selected':'')+'>🏫 '+s+'</option>'; });
-  grades.forEach(function(g){ html += '<option value="grade:'+g+'" '+(dataClassFilter==='grade:'+g?'selected':'')+'>📚 '+g+'학년</option>'; });
-  teachers.forEach(function(t){ html += '<option value="teacher:'+t+'" '+(dataClassFilter==='teacher:'+t?'selected':'')+'>👤 '+t+'</option>'; });
+  var selStyle = 'width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--text);font-size:11px;font-weight:700;outline:none;margin-bottom:4px;';
+
+  var html = '<div style="padding:0 2px 8px;">';
+
+  // 학교 필터
+  html += '<div style="font-size:9px;font-weight:800;color:var(--text3);margin-bottom:3px;">학교</div>';
+  html += '<select id="fs-school" style="'+selStyle+'"><option value="all">전체</option>';
+  schools.forEach(function(s){ html += '<option value="'+s+'" '+(filterSchool===s?'selected':'')+'>'+s+'</option>'; });
+  html += '</select>';
+
+  // 학년 필터
+  html += '<div style="font-size:9px;font-weight:800;color:var(--text3);margin-bottom:3px;">학년</div>';
+  html += '<select id="fs-grade" style="'+selStyle+'"><option value="all">전체</option>';
+  grades.forEach(function(g){ html += '<option value="'+g+'" '+(filterGrade==g?'selected':'')+'>'+g+'학년</option>'; });
+  html += '</select>';
+
+  // 선생님 필터
+  html += '<div style="font-size:9px;font-weight:800;color:var(--text3);margin-bottom:3px;">담당 선생님</div>';
+  html += '<select id="fs-teacher" style="'+selStyle+'"><option value="all">전체</option>';
+  teachers.forEach(function(t){ html += '<option value="'+t+'" '+(filterTeacher===t?'selected':'')+'>'+t+'</option>'; });
   html += '</select></div>';
 
-  // 필터 적용
+  // 교집합 필터 적용
   var filtered = CLASSES.filter(function(c){
-    if (dataClassFilter==='all') return true;
-    var parts = dataClassFilter.split(':');
-    if (parts[0]==='school') return c.school===parts[1];
-    if (parts[0]==='grade') return c.grade===parseInt(parts[1]);
-    if (parts[0]==='teacher') return c.teacher===parts[1];
+    if (filterSchool!=='all' && c.school!==filterSchool) return false;
+    if (filterGrade!=='all' && c.grade!==parseInt(filterGrade)) return false;
+    if (filterTeacher!=='all' && c.teacher!==filterTeacher) return false;
     return true;
   });
 
@@ -701,16 +744,12 @@ function renderDataClassList() {
   el.innerHTML = html;
 
   // 셀렉트 이벤트
-  var sel = document.getElementById('class-filter-sel');
-  if (sel) {
-    sel.value = dataClassFilter;
-    sel.addEventListener('change', function(){
-      dataClassFilter = this.value;
-      dataSelectedClass = null;
-      document.getElementById('data-content').innerHTML = '<div class="data-empty">반을 선택하세요</div>';
-      renderDataClassList();
-    });
-  }
+  var fsSchool = document.getElementById('fs-school');
+  var fsGrade = document.getElementById('fs-grade');
+  var fsTeacher = document.getElementById('fs-teacher');
+  if (fsSchool) fsSchool.addEventListener('change', function(){ filterSchool=this.value; dataSelectedClass=null; document.getElementById('data-content').innerHTML='<div class="data-empty">반을 선택하세요</div>'; renderDataClassList(); });
+  if (fsGrade) fsGrade.addEventListener('change', function(){ filterGrade=this.value; dataSelectedClass=null; document.getElementById('data-content').innerHTML='<div class="data-empty">반을 선택하세요</div>'; renderDataClassList(); });
+  if (fsTeacher) fsTeacher.addEventListener('change', function(){ filterTeacher=this.value; dataSelectedClass=null; document.getElementById('data-content').innerHTML='<div class="data-empty">반을 선택하세요</div>'; renderDataClassList(); });
 }
 
 // Firebase에서 반 데이터 로드
