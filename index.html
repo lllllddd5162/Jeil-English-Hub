@@ -112,6 +112,58 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
 .no-cards{text-align:center;padding:48px;color:var(--text3);font-size:14px;}
 .footer{text-align:center;padding:40px 0 0;color:var(--text3);font-size:12px;line-height:2;}
+
+/* 데이터 뷰어 모달 */
+.data-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
+.data-modal-overlay.show{opacity:1;pointer-events:all;}
+.data-modal{background:var(--surface);border:1px solid var(--border);border-radius:24px;width:min(900px,96vw);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
+.data-modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.data-modal-header h2{font-size:16px;font-weight:800;color:var(--text);}
+.data-modal-close{background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;padding:0;line-height:1;font-family:'Pretendard',sans-serif;}
+.data-modal-body{display:flex;flex:1;overflow:hidden;}
+/* 반 목록 사이드 */
+.data-class-list{width:200px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:12px 8px;}
+.data-class-item{padding:10px 12px;border-radius:12px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;transition:all .15s;margin-bottom:2px;}
+.data-class-item:hover{background:var(--surface2);color:var(--text);}
+.data-class-item.active{background:rgba(59,130,246,.15);color:var(--accent);border:1px solid rgba(59,130,246,.2);}
+.data-class-item .item-school{font-size:10px;color:var(--text3);margin-bottom:2px;}
+/* 데이터 콘텐츠 */
+.data-content{flex:1;overflow-y:auto;padding:20px 24px;}
+.data-loading{text-align:center;padding:40px;color:var(--text2);font-size:14px;}
+.data-empty{text-align:center;padding:40px;color:var(--text3);font-size:13px;}
+/* 진도 현황 */
+.progress-overall{background:var(--surface2);border-radius:16px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:16px;}
+.progress-overall-pct{font-size:28px;font-weight:900;color:var(--green);flex-shrink:0;}
+.progress-bar-wrap{flex:1;}
+.progress-bar-label{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;}
+.progress-bar-bg{height:8px;background:var(--border);border-radius:100px;overflow:hidden;}
+.progress-bar-fill{height:100%;background:var(--green);border-radius:100px;transition:width .5s;}
+.subject-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px;}
+.subject-card{background:var(--surface2);border-radius:12px;padding:12px 14px;}
+.subject-card-name{font-size:11px;font-weight:800;color:var(--text2);margin-bottom:6px;}
+.subject-card-pct{font-size:18px;font-weight:900;color:var(--accent);margin-bottom:4px;}
+.subject-card-bar{height:4px;background:var(--border);border-radius:100px;overflow:hidden;}
+.subject-card-bar-fill{height:100%;background:var(--accent);border-radius:100px;}
+.subject-card-sub{font-size:10px;color:var(--text3);margin-top:4px;}
+.plan-list{display:flex;flex-direction:column;gap:6px;}
+.plan-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border-radius:10px;}
+.plan-date{font-size:10px;font-weight:700;color:var(--text3);width:80px;flex-shrink:0;}
+.plan-type{font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;background:rgba(59,130,246,.15);color:var(--accent);flex-shrink:0;}
+.plan-subject{font-size:10px;font-weight:700;color:var(--text3);flex-shrink:0;}
+.plan-unit{font-size:12px;font-weight:700;color:var(--text);flex:1;}
+.plan-done{font-size:10px;color:var(--green);flex-shrink:0;}
+/* 성적표 */
+.score-table{width:100%;border-collapse:collapse;font-size:12px;}
+.score-table th{padding:8px 12px;text-align:left;font-weight:800;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.06em;}
+.score-table td{padding:10px 12px;border-bottom:1px solid var(--border);}
+.score-table tr:hover td{background:var(--surface2);}
+.score-badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:800;}
+
+/* 퀵버튼 */
+.quick-btns{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.quick-btn{display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:100px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;}
+.quick-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(59,130,246,.05);}
+.quick-btn .qicon{font-size:16px;}
 @media(max-width:600px){.cards{grid-template-columns:1fr 1fr;}}
 @media(max-width:400px){.cards{grid-template-columns:1fr;}}
 </style>
@@ -131,6 +183,14 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 
   <div class="mode-panel active" id="panel-manager">
+    <div class="quick-btns">
+      <button type="button" class="quick-btn" id="btn-progress">
+        <span class="qicon">📊</span> 진도 현황
+      </button>
+      <button type="button" class="quick-btn" id="btn-scores">
+        <span class="qicon">🏆</span> 시험 성적표
+      </button>
+    </div>
     <div class="sort-bar">
       <span class="lbl">분류</span>
       <div class="sort-btn active" id="mg-grade">학년별</div>
@@ -181,6 +241,22 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="modal-btns">
       <button class="modal-cancel" id="modal-cancel-btn">취소</button>
       <button class="modal-confirm" id="modal-confirm-btn">접속 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- 데이터 뷰어 모달 -->
+<div class="data-modal-overlay" id="data-modal">
+  <div class="data-modal">
+    <div class="data-modal-header">
+      <h2 id="data-modal-title">진도 현황</h2>
+      <button type="button" class="data-modal-close" id="data-modal-close">×</button>
+    </div>
+    <div class="data-modal-body">
+      <div class="data-class-list" id="data-class-list"></div>
+      <div class="data-content" id="data-content">
+        <div class="data-empty">왼쪽에서 반을 선택하세요</div>
+      </div>
     </div>
   </div>
 </div>
@@ -558,6 +634,201 @@ document.addEventListener('click', function(e){
 
 // 즉시 렌더링
 renderAll();
+
+// =============================================
+// 데이터 뷰어 (진도 현황 / 시험 성적표)
+// =============================================
+var dataModalMode = 'progress'; // 'progress' | 'scores'
+var dataSelectedClass = null;
+
+// 반 목록 렌더
+function renderDataClassList() {
+  var el = document.getElementById('data-class-list');
+  var html = '';
+  CLASSES.forEach(function(c) {
+    html += '<div class="data-class-item'+(dataSelectedClass && dataSelectedClass.appId===c.appId?' active':'')+'" data-appid="'+c.appId+'">' +
+      '<div class="item-school">'+c.school+'</div>' +
+      c.name +
+    '</div>';
+  });
+  el.innerHTML = html;
+}
+
+// Firebase에서 반 데이터 로드
+function loadClassData(c) {
+  var content = document.getElementById('data-content');
+  content.innerHTML = '<div class="data-loading">⏳ 데이터 불러오는 중...</div>';
+  var basePath = 'artifacts/'+c.appId+'/public/data/';
+  var fbDb = db || (function(){
+    try {
+      var FB = {apiKey:'AIzaSyBaWWriu3X7iVQnglR5XcA0Mqqc736VopM',authDomain:'science-academy-13dda.firebaseapp.com',projectId:'science-academy-13dda',storageBucket:'science-academy-13dda.firebasestorage.app',messagingSenderId:'449626746191',appId:'1:449626746191:web:73885c6bb862a07655293a'};
+      if (!firebase.apps.length) firebase.initializeApp(FB);
+      db = firebase.firestore();
+      return db;
+    } catch(e) { return null; }
+  })();
+
+  if (!fbDb) { content.innerHTML = '<div class="data-empty">Firebase 연결 실패</div>'; return; }
+
+  if (dataModalMode === 'progress') {
+    Promise.all([
+      fbDb.collection(basePath+'progressPlans').get(),
+    ]).then(function(results) {
+      var plans = results[0].docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+      renderProgressData(plans, c);
+    }).catch(function(e) {
+      content.innerHTML = '<div class="data-empty">데이터를 불러올 수 없습니다.<br><small>'+e.message+'</small></div>';
+    });
+  } else {
+    Promise.all([
+      fbDb.collection(basePath+'tests').get(),
+      fbDb.collection(basePath+'students').get(),
+      fbDb.collection(basePath+'testScores').get(),
+    ]).then(function(results) {
+      var tests = results[0].docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+      var students = results[1].docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+      var scores = {};
+      results[2].docs.forEach(function(d){ scores[d.id]=d.data(); });
+      renderScoresData(tests, students, scores, c);
+    }).catch(function(e) {
+      content.innerHTML = '<div class="data-empty">데이터를 불러올 수 없습니다.<br><small>'+e.message+'</small></div>';
+    });
+  }
+}
+
+function renderProgressData(plans, c) {
+  var content = document.getElementById('data-content');
+  if (!plans.length) { content.innerHTML = '<div class="data-empty">등록된 진도 계획이 없습니다.</div>'; return; }
+
+  var jinDo = plans.filter(function(p){ return !p.lessonType || p.lessonType==='진도'; });
+  var done = jinDo.filter(function(p){ return p.done; }).length;
+  var pct = jinDo.length ? Math.round(done/jinDo.length*100) : 0;
+
+  // 과목별 통계
+  var subjectMap = {};
+  jinDo.forEach(function(p){
+    var sub = p.subject || '미분류';
+    if (!subjectMap[sub]) subjectMap[sub] = {total:0,done:0};
+    subjectMap[sub].total++;
+    if (p.done) subjectMap[sub].done++;
+  });
+
+  var html = '<h3 style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em;">'+c.name+' 진도 현황</h3>';
+
+  // 전체 진도율
+  html += '<div class="progress-overall">' +
+    '<div class="progress-overall-pct">'+pct+'%</div>' +
+    '<div class="progress-bar-wrap">' +
+      '<div class="progress-bar-label">전체 진도율 · '+done+'/'+jinDo.length+'건 완료</div>' +
+      '<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:'+pct+'%"></div></div>' +
+    '</div></div>';
+
+  // 과목별
+  var subKeys = Object.keys(subjectMap);
+  if (subKeys.length) {
+    html += '<div class="subject-grid">';
+    subKeys.forEach(function(sub){
+      var s = subjectMap[sub];
+      var sp = Math.round(s.done/s.total*100);
+      html += '<div class="subject-card">' +
+        '<div class="subject-card-name">'+sub+'</div>' +
+        '<div class="subject-card-pct">'+sp+'%</div>' +
+        '<div class="subject-card-bar"><div class="subject-card-bar-fill" style="width:'+sp+'%"></div></div>' +
+        '<div class="subject-card-sub">'+s.done+'/'+s.total+' 완료</div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  // 최근 진도 목록
+  var sorted = plans.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+  html += '<p style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">최근 수업 기록</p>';
+  html += '<div class="plan-list">';
+  sorted.slice(0,20).forEach(function(p){
+    html += '<div class="plan-item">' +
+      '<span class="plan-date">'+(p.date||'-')+'</span>' +
+      '<span class="plan-type">'+(p.lessonType||'진도')+'</span>' +
+      (p.subject ? '<span class="plan-subject">'+p.subject+'</span>' : '') +
+      '<span class="plan-unit">'+(p.unit||'-')+'</span>' +
+      (p.done ? '<span class="plan-done">✓</span>' : '') +
+    '</div>';
+  });
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+function renderScoresData(tests, students, scores, c) {
+  var content = document.getElementById('data-content');
+  if (!tests.length) { content.innerHTML = '<div class="data-empty">등록된 시험이 없습니다.</div>'; return; }
+
+  var sortedStudents = students.slice().sort(function(a,b){ return (a.sortOrder||0)-(b.sortOrder||0)||a.name.localeCompare(b.name,'ko'); });
+  var sortedTests = tests.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+
+  var html = '<h3 style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em;">'+c.name+' 시험 성적표</h3>';
+  html += '<div style="overflow-x:auto;"><table class="score-table"><thead><tr>' +
+    '<th>학생</th>';
+  sortedTests.forEach(function(t){
+    html += '<th>'+t.title+'<br><span style="font-weight:400;text-transform:none;letter-spacing:0;">'+t.date+(t.maxScore?' · '+t.maxScore+'점':'')+'</span></th>';
+  });
+  html += '<th>평균</th></tr></thead><tbody>';
+
+  sortedStudents.forEach(function(s){
+    var scoreVals = [];
+    html += '<tr><td style="font-weight:700;color:var(--text);">'+s.name+'</td>';
+    sortedTests.forEach(function(t){
+      var key = s.id+'-'+t.id;
+      var res = scores[key]||{};
+      if (res.absent==='absent') {
+        html += '<td><span class="score-badge" style="background:rgba(239,68,68,.1);color:#ef4444;">결시</span></td>';
+      } else if (res.absent==='excluded') {
+        html += '<td><span style="color:var(--text3);font-size:11px;">-</span></td>';
+      } else if (res.score!=null) {
+        scoreVals.push(res.score);
+        var pct = t.maxScore ? Math.round(res.score/t.maxScore*100) : null;
+        html += '<td style="font-weight:800;color:var(--text);">'+res.score+'점'+(pct!=null?' <span style="font-size:10px;color:var(--text3);">('+pct+'%)</span>':'')+'</td>';
+      } else {
+        html += '<td><span style="color:var(--text3);font-size:11px;">미입력</span></td>';
+      }
+    });
+    var avg = scoreVals.length ? (scoreVals.reduce(function(a,b){return a+b;},0)/scoreVals.length).toFixed(1) : '-';
+    html += '<td style="font-weight:900;color:var(--accent);">'+avg+'</td></tr>';
+  });
+
+  html += '</tbody></table></div>';
+  content.innerHTML = html;
+}
+
+// 이벤트
+document.getElementById('btn-progress').addEventListener('click', function(){
+  dataModalMode = 'progress';
+  dataSelectedClass = null;
+  document.getElementById('data-modal-title').textContent = '📊 진도 현황';
+  renderDataClassList();
+  document.getElementById('data-content').innerHTML = '<div class="data-empty">왼쪽에서 반을 선택하세요</div>';
+  document.getElementById('data-modal').classList.add('show');
+});
+document.getElementById('btn-scores').addEventListener('click', function(){
+  dataModalMode = 'scores';
+  dataSelectedClass = null;
+  document.getElementById('data-modal-title').textContent = '🏆 시험 성적표';
+  renderDataClassList();
+  document.getElementById('data-content').innerHTML = '<div class="data-empty">왼쪽에서 반을 선택하세요</div>';
+  document.getElementById('data-modal').classList.add('show');
+});
+document.getElementById('data-modal-close').addEventListener('click', function(){
+  document.getElementById('data-modal').classList.remove('show');
+});
+document.getElementById('data-modal').addEventListener('click', function(e){
+  if (e.target===this) this.classList.remove('show');
+});
+document.getElementById('data-class-list').addEventListener('click', function(e){
+  var item = e.target.closest('.data-class-item');
+  if (!item) return;
+  var appId = item.dataset.appid;
+  dataSelectedClass = CLASSES.find(function(c){ return c.appId===appId; });
+  renderDataClassList();
+  if (dataSelectedClass) loadClassData(dataSelectedClass);
+});
 
 // Firebase 백그라운드 연결
 window.addEventListener('load', function(){
