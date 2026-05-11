@@ -342,12 +342,7 @@ function setSort(mode,type,el){
   el.classList.add('active');
   renderAll();
 }
-function selectTeacher(name,el){
-  selectedTeacher=selectedTeacher===name?null:name;
-  document.querySelectorAll('#teacher-btns .teacher-btn').forEach(function(b){b.classList.remove('active');});
-  if(selectedTeacher) el.classList.add('active');
-  renderAll();
-}
+// selectTeacher → 이벤트 위임으로 처리
 function toggleEdit(){
   editMode=!editMode;
   var btn=document.getElementById('edit-toggle');
@@ -391,11 +386,7 @@ function addTeacher(){
   TEACHERS=TEACHERS.concat([name]).sort(function(a,b){return a.localeCompare(b,'ko');});
   save(); input.value=''; renderAll();
 }
-function deleteTeacher(name){
-  if(!confirm('"'+name+'" 선생님을 삭제할까요?')) return;
-  TEACHERS=TEACHERS.filter(function(t){return t!==name;});
-  save(); renderAll();
-}
+// deleteTeacher → 이벤트 위임으로 처리
 
 function cardHTML(c,mode){
   var opts = TEACHERS.map(function(t){
@@ -444,19 +435,39 @@ function renderGroups(list,mode,containerId){
 function renderManager(){renderGroups(CLASSES,'manager','manager-cards');}
 function renderTeacher(){
   document.getElementById('teacher-btns').innerHTML=TEACHERS.map(function(t){
-    return '<div class="teacher-btn'+(selectedTeacher===t?' active':'')+'" onclick="selectTeacher(''+t+'',this)">'+t+'</div>';
+    return '<div class="teacher-btn'+(selectedTeacher===t?' active':'')+'" data-teacher="'+t+'">'+t+'</div>';
   }).join('');
   renderGroups(selectedTeacher?CLASSES.filter(function(c){return c.teacher===selectedTeacher;}):CLASSES,'teacher','teacher-cards');
 }
 function renderMaster(){
   document.getElementById('teacher-manage-list').innerHTML=TEACHERS.map(function(t){
-    return '<div class="teacher-tag">'+t+'<button class="teacher-tag-del" onclick="deleteTeacher(''+t+'')">×</button></div>';
+    return '<div class="teacher-tag">'+t+'<button class="teacher-tag-del" data-teacher="'+t+'">×</button></div>';
   }).join('');
   renderGroups(CLASSES,'master','master-cards');
 }
 function renderAll(){renderManager();renderTeacher();renderMaster();}
 
 // 이벤트 위임으로 모든 클릭/변경 처리
+document.addEventListener('click', function(e){
+  // 선생님 버튼 클릭 (담당 선생님 탭)
+  var teacherBtn = e.target.closest('.teacher-btn');
+  if(teacherBtn && teacherBtn.dataset.teacher){
+    var name = teacherBtn.dataset.teacher;
+    selectedTeacher = selectedTeacher===name ? null : name;
+    document.querySelectorAll('#teacher-btns .teacher-btn').forEach(function(b){b.classList.remove('active');});
+    if(selectedTeacher) teacherBtn.classList.add('active');
+    renderAll();
+    return;
+  }
+  // 선생님 삭제 버튼
+  var delBtn = e.target.closest('.teacher-tag-del');
+  if(delBtn && delBtn.dataset.teacher){
+    if(!confirm('"'+delBtn.dataset.teacher+'" 선생님을 삭제할까요?')) return;
+    TEACHERS = TEACHERS.filter(function(t){return t!==delBtn.dataset.teacher;});
+    save(); renderAll();
+    return;
+  }
+});
 document.addEventListener('change', function(e){
   // 선생님 드롭다운 변경
   if(e.target.classList.contains('teacher-select')){
