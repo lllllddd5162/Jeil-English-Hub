@@ -816,7 +816,7 @@ function renderProgressData(plans, c) {
     html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">';
     ['all'].concat(allSubjects).forEach(function(sub){
       var active = activeSub===sub;
-      html += '<button onclick="progressSubFilter(''+sub+'')" style="padding:5px 14px;border-radius:100px;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'rgba(59,130,246,.15)':'var(--surface2)')+';color:'+(active?'var(--accent)':'var(--text2)')+';font-size:11px;font-weight:700;cursor:pointer;">'+(sub==='all'?'전체':sub)+'</button>';
+      html += '<button class="prog-sub-btn" data-sub="'+sub+'" style="padding:5px 14px;border-radius:100px;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'rgba(59,130,246,.15)':'var(--surface2)')+';color:'+(active?'var(--accent)':'var(--text2)')+';font-size:11px;font-weight:700;cursor:pointer;">'+(sub==='all'?'전체':sub)+'</button>';
     });
     html += '</div>';
   }
@@ -876,26 +876,15 @@ function renderProgressData(plans, c) {
 
 var _cachedProgress = null;
 
-function progressSubFilter(sub) {
-  var el = document.getElementById('data-content');
-  el.dataset.subFilter = sub;
-  if (_cachedProgress) renderProgressData(_cachedProgress.plans, _cachedProgress.c);
-}
+// progressSubFilter -> 이벤트 위임으로 처리
 
 // 열린 시험 카드 ID
 var openTestId = null;
 var _cachedScores = null;
 
-function scoreTypeFilter(type) {
-  var el = document.getElementById('data-content');
-  el.dataset.typeFilter = type;
-  if (_cachedScores) renderScoresData(_cachedScores.tests, _cachedScores.students, _cachedScores.scores, _cachedScores.c);
-}
+// scoreTypeFilter -> 이벤트 위임으로 처리
 
-function toggleTestCard(tid) {
-  openTestId = openTestId === tid ? null : tid;
-  if (_cachedScores) renderScoresData(_cachedScores.tests, _cachedScores.students, _cachedScores.scores, _cachedScores.c);
-}
+// toggleTestCard -> 이벤트 위임으로 처리
 
 function renderScoresData(tests, students, scores, c) {
   var el = document.getElementById('data-content');
@@ -916,7 +905,7 @@ function renderScoresData(tests, students, scores, c) {
   html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">';
   ['all'].concat(types).forEach(function(tp){
     var active = activeType===tp;
-    html += '<button onclick="scoreTypeFilter(''+tp+'')" style="padding:5px 14px;border-radius:100px;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'rgba(59,130,246,.15)':'var(--surface2)')+';color:'+(active?'var(--accent)':'var(--text2)')+';font-size:11px;font-weight:700;cursor:pointer;">'+(tp==='all'?'전체':tp)+'</button>';
+    html += '<button class="score-type-btn" data-type="'+tp+'" style="padding:5px 14px;border-radius:100px;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'rgba(59,130,246,.15)':'var(--surface2)')+';color:'+(active?'var(--accent)':'var(--text2)')+';font-size:11px;font-weight:700;cursor:pointer;">'+(tp==='all'?'전체':tp)+'</button>';
   });
   html += '</div>';
 
@@ -932,7 +921,7 @@ function renderScoresData(tests, students, scores, c) {
 
     html += '<div style="background:var(--surface2);border-radius:16px;margin-bottom:10px;overflow:hidden;">';
     // 헤더
-    html += '<div onclick="toggleTestCard(''+t.id+'')" style="padding:14px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
+    html += '<div class="test-card-header" data-tid="'+t.id+'" style="padding:14px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
       '<div style="flex:1;min-width:0;">' +
         '<div style="font-size:14px;font-weight:800;color:var(--text);">'+t.title+'</div>' +
         '<div style="font-size:10px;color:var(--text3);margin-top:2px;">'+t.date+(t.maxScore?' · 만점 '+t.maxScore+'점':'')+(t.testType?' · '+t.testType:'')+'</div>' +
