@@ -314,8 +314,8 @@ window.toggleEdit=function(){
 };
 
 function cardHTML(c,mode){
-  const teacherRow=editMode&&mode==='master'
-    ?`<select class="teacher-select" data-appid="${c.appId}">${TEACHERS.map(t=>`<option${t===c.teacher?' selected':''}>${t}</option>`).join('')}</select>`
+  const teacherRow=mode==='master'
+    ?`<select class="teacher-select" onchange="changeTeacher('${c.appId}',this.value)">${TEACHERS.map(t=>`<option${t===c.teacher?' selected':''}>${t}</option>`).join('')}</select>`
     :`<span class="card-teacher">${c.teacher} 선생님</span>`;
 
   const clickAttr=mode==='manager'
@@ -375,6 +375,14 @@ function renderAll(){renderManager();renderTeacher();renderMaster();}
 
 window.openSite=function(url){window.open(url,'_blank');};
 
+window.changeTeacher=function(appId, newTeacher){
+  if(!appId||!newTeacher) return;
+  const idx=CLASSES.findIndex(c=>c.appId===appId);
+  if(idx<0) return;
+  CLASSES[idx]={...CLASSES[idx],teacher:newTeacher};
+  save();
+};
+
 window.masterGo=function(appId){
   const input=document.getElementById('code-'+appId);
   const code=input?input.value.trim():'';
@@ -422,18 +430,7 @@ window.deleteTeacher=function(name){
   renderAll();
 };
 
-// 이벤트 위임: 선생님 드롭다운
-document.addEventListener('change',function(e){
-  if(e.target.classList.contains('teacher-select')){
-    const appId=e.target.dataset.appid;
-    const newTeacher=e.target.value;
-    if(!appId||!newTeacher) return;
-    const idx=CLASSES.findIndex(c=>c.appId===appId);
-    if(idx<0) return;
-    CLASSES[idx]={...CLASSES[idx],teacher:newTeacher};
-    save();
-  }
-});
+// 선생님 변경: window.changeTeacher 함수로 처리
 
 document.getElementById('code-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
