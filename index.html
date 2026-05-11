@@ -316,7 +316,7 @@ window.toggleEdit=function(){
 
 function cardHTML(c,mode){
   const teacherRow=editMode&&mode==='master'
-    ?`<select class="teacher-select" onchange="changeTeacher('${c.appId}',this.value)">${TEACHERS.map(t=>`<option${t===c.teacher?' selected':''}>${t}</option>`).join('')}</select>`
+    ?`<select class="teacher-select" data-appid="${c.appId}">${TEACHERS.map(t=>`<option${t===c.teacher?' selected':'')}>${t}</option>`).join('')}</select>`
     :`<span class="card-teacher">${c.teacher} 선생님</span>`;
 
   const clickable=mode!=='master';
@@ -411,12 +411,7 @@ window.modalConfirm=function(){
   closeModal();
 };
 
-window.changeTeacher=async function(appId,newTeacher){
-  const idx=CLASSES.findIndex(c=>c.appId===appId);
-  if(idx<0) return;
-  CLASSES[idx]={...CLASSES[idx],teacher:newTeacher};
-  await save();
-};
+// changeTeacher → 이벤트 위임 방식으로 대체됨
 window.addTeacher=async function(){
   const input=document.getElementById('add-teacher-input');
   const name=input.value.trim();
@@ -434,6 +429,19 @@ window.deleteTeacher=async function(name){
 document.getElementById('code-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
 // INIT
+// 이벤트 위임: master-cards 내 select change
+document.getElementById('master-cards').addEventListener('change', async function(e) {
+  if (e.target.classList.contains('teacher-select')) {
+    const appId = e.target.dataset.appid;
+    const newTeacher = e.target.value;
+    if (!appId || !newTeacher) return;
+    const idx = CLASSES.findIndex(c => c.appId === appId);
+    if (idx < 0) return;
+    CLASSES[idx] = {...CLASSES[idx], teacher: newTeacher};
+    await save();
+  }
+});
+
 signInAnonymously(auth).then(()=>{
   onSnapshot(HUB_DOC,snap=>{
     if(snap.exists()){
