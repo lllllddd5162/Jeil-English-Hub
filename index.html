@@ -60,7 +60,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .group-label::after{content:'';flex:1;height:1px;background:var(--border);}
 
 /* CARDS */
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;overflow:visible;}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);padding:18px 20px;transition:all .25s;position:relative;overflow:visible;}
 .card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(59,130,246,.06),rgba(99,102,241,.03));opacity:0;transition:opacity .25s;}
 .card:hover{border-color:rgba(59,130,246,.4);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4);}
@@ -127,7 +127,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .no-cards{text-align:center;padding:48px;color:var(--text3);font-size:14px;}
 
 /* 선생님 선택 팝업 */
-.teacher-picker{position:relative;display:inline-block;width:100%;}
+.teacher-picker{position:static;display:block;width:100%;}
 .teacher-picker-btn{
   width:100%;display:flex;align-items:center;justify-content:space-between;
   background:var(--surface2);border:1px solid var(--border);border-radius:10px;
@@ -140,7 +140,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .teacher-picker-list{
   position:fixed;z-index:9999;min-width:160px;
   background:var(--surface);border:1px solid var(--border);border-radius:12px;
-  overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.6);
+  overflow-y:auto;max-height:240px;box-shadow:0 8px 24px rgba(0,0,0,.6);
   display:none;
 }
 .teacher-picker-list.show{display:block;}
@@ -513,16 +513,17 @@ document.addEventListener('click', function(e){
     if(!isOpen){
       // 버튼 위치 계산해서 fixed 포지션 설정
       var rect = btn.getBoundingClientRect();
-      var listH = TEACHERS.length * 41;
+      var listH = Math.min(TEACHERS.length * 41, 240);
       var spaceBelow = window.innerHeight - rect.bottom;
-      if(spaceBelow < listH + 10) {
-        // 위로 표시
-        list.style.top = (rect.top - listH - 6) + 'px';
+      var top, left;
+      if(spaceBelow < listH + 10 && rect.top > listH) {
+        top = rect.top - listH - 6;
       } else {
-        // 아래로 표시
-        list.style.top = (rect.bottom + 6) + 'px';
+        top = rect.bottom + 6;
       }
-      list.style.left = rect.left + 'px';
+      left = Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8));
+      list.style.top = top + 'px';
+      list.style.left = left + 'px';
       list.style.width = rect.width + 'px';
       list.classList.add('show');
       btn.classList.add('open');
