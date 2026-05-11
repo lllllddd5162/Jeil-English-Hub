@@ -212,13 +212,9 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 </div>
 
 <script>
-const FB = {apiKey:"AIzaSyBaWWriu3X7iVQnglR5XcA0Mqqc736VopM",authDomain:"science-academy-13dda.firebaseapp.com",projectId:"science-academy-13dda",storageBucket:"science-academy-13dda.firebasestorage.app",messagingSenderId:"449626746191",appId:"1:449626746191:web:73885c6bb862a07655293a"};
-firebase.initializeApp(FB);
-const db = firebase.firestore();
-const auth = firebase.auth();
-const HUB_DOC = db.doc('artifacts/Jeil-english-Seongdong-grade1S/public/data/hub/config');
 const BASE_URL = 'https://lllllddd5162.github.io/';
 const TEACHER_CODE = '26350';
+const LS_KEY = 'jeil_hub_v2';
 
 const DEFAULT_CLASSES = [
   {name:'성동고 1S반',school:'성동고',grade:1,teacher:'박동혁',appId:'Jeil-english-Seongdong-grade1S'},
@@ -242,13 +238,64 @@ const DEFAULT_CLASSES = [
 ];
 const DEFAULT_TEACHERS = ['박동혁','박민우','신채리','이성규','장지호','최주성'];
 
-var CLASSES=[], TEACHERS=[], masterCodes={};
+// localStorage에서 로드
+function loadLocal() {
+  try {
+    var s = localStorage.getItem(LS_KEY);
+    if (s) {
+      var d = JSON.parse(s);
+      return { classes: d.classes||DEFAULT_CLASSES, teachers: d.teachers||DEFAULT_TEACHERS, masterCodes: d.masterCodes||{} };
+    }
+  } catch(e) {}
+  return { classes: DEFAULT_CLASSES, teachers: DEFAULT_TEACHERS, masterCodes: {} };
+}
+function saveLocal() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify({classes:CLASSES,teachers:TEACHERS,masterCodes:masterCodes})); } catch(e) {}
+}
+
+var init = loadLocal();
+var CLASSES = init.classes;
+var TEACHERS = init.teachers;
+var masterCodes = init.masterCodes;
 var currentMode='manager', sortState={manager:'grade',teacher:'grade',master:'grade'};
 var selectedTeacher=null, editMode=false, modalTarget=null;
+var db = null; // Firebase - 백그라운드 연결
 
+// 로컬 저장 + Firebase 백그라운드 동기화
 function save() {
-  HUB_DOC.set({classes:CLASSES, teachers:TEACHERS, masterCodes:masterCodes}, {merge:true})
-    .catch(function(e){ console.error('저장 실패:', e); });
+  saveLocal();
+  if (db) {
+    try {
+      db.doc('artifacts/Jeil-english-Seongdong-grade1S/public/data/hub/config')
+        .set({classes:CLASSES,teachers:TEACHERS,masterCodes:masterCodes},{merge:true})
+        .catch(function(e){console.warn('Firebase 저장 실패(무시):', e);});
+    } catch(e) {}
+  }
+}
+
+// Firebase 백그라운드 연결 (실패해도 앱 동작에 영향 없음)
+function connectFirebase() {
+  try {
+    var FB = {apiKey:"AIzaSyBaWWriu3X7iVQnglR5XcA0Mqqc736VopM",authDomain:"science-academy-13dda.firebaseapp.com",projectId:"science-academy-13dda",storageBucket:"science-academy-13dda.firebasestorage.app",messagingSenderId:"449626746191",appId:"1:449626746191:web:73885c6bb862a07655293a"};
+    if (!firebase.apps.length) firebase.initializeApp(FB);
+    db = firebase.firestore();
+    firebase.auth().signInAnonymously().then(function() {
+      db.doc('artifacts/Jeil-english-Seongdong-grade1S/public/data/hub/config')
+        .onSnapshot(function(snap) {
+          if (snap.exists) {
+            var d = snap.data();
+            var fbClasses = d.classes||null;
+            var fbTeachers = d.teachers||null;
+            var fbCodes = d.masterCodes||{};
+            // Firebase 데이터가 있으면 덮어씀
+            if (fbClasses) { CLASSES = fbClasses; TEACHERS = fbTeachers||TEACHERS; masterCodes = fbCodes; saveLocal(); renderAll(); }
+          } else {
+            // 최초 접속 - 현재 데이터 Firebase에 저장
+            save();
+          }
+        }, function(e){ console.warn('Firebase 구독 실패(무시):', e); });
+    }).catch(function(e){ console.warn('Firebase Auth 실패(무시):', e); });
+  } catch(e) { console.warn('Firebase 초기화 실패(무시):', e); }
 }
 
 function sortList(list, type) {
@@ -257,13 +304,10 @@ function sortList(list, type) {
       if(a.grade!==b.grade) return a.grade-b.grade;
       var sc=a.school.localeCompare(b.school,'ko');
       if(sc!==0) return sc;
-      var rank=function(s){return s.includes('S')?0:s.includes('H')?1:2;};
-      return rank(a.name)-rank(b.name);
-    } else {
-      var tc=a.teacher.localeCompare(b.teacher,'ko');
-      if(tc!==0) return tc;
-      return a.grade-b.grade||a.school.localeCompare(b.school,'ko');
+      return (a.name.includes('S')?0:a.name.includes('H')?1:2)-(b.name.includes('S')?0:b.name.includes('H')?1:2);
     }
+    var tc=a.teacher.localeCompare(b.teacher,'ko');
+    return tc||a.grade-b.grade||a.school.localeCompare(b.school,'ko');
   });
 }
 
@@ -312,7 +356,7 @@ function toggleEdit(){
   document.getElementById('manage-panel').style.display=editMode?'block':'none';
   renderMaster();
 }
-function changeTeacher(appId, newTeacher){
+function changeTeacher(appId,newTeacher){
   var idx=CLASSES.findIndex(function(c){return c.appId===appId;});
   if(idx<0) return;
   CLASSES[idx]=Object.assign({},CLASSES[idx],{teacher:newTeacher});
@@ -353,27 +397,23 @@ function addTeacher(){
   var name=input.value.trim();
   if(!name||TEACHERS.includes(name)){input.focus();return;}
   TEACHERS=TEACHERS.concat([name]).sort(function(a,b){return a.localeCompare(b,'ko');});
-  save();
-  input.value='';
-  renderAll();
+  save(); input.value=''; renderAll();
 }
 function deleteTeacher(name){
   if(!confirm('"'+name+'" 선생님을 삭제할까요?')) return;
   TEACHERS=TEACHERS.filter(function(t){return t!==name;});
-  save();
-  renderAll();
+  save(); renderAll();
 }
 
 function cardHTML(c,mode){
   var teacherRow = mode==='master'
     ? '<select class="teacher-select" onchange="changeTeacher(''+c.appId+'',this.value)">'+
-      TEACHERS.map(function(t){return '<option'+(t===c.teacher?' selected':'')+'>'+t+'</option>';}).join('')+
-      '</select>'
+      TEACHERS.map(function(t){return '<option'+(t===c.teacher?' selected':'')+'>'+t+'</option>';}).join('')+'</select>'
     : '<span class="card-teacher">'+c.teacher+' 선생님</span>';
 
   var clickAttr = mode==='manager'
-    ? 'onclick="openSite(''+BASE_URL+c.appId+'/?code='+TEACHER_CODE+'')"'
-    : mode==='teacher' ? 'onclick="openTeacherCard(''+c.appId+'',''+c.name+'')"' : '';
+    ? 'onclick="openSite(''+BASE_URL+c.appId+'/?code='+TEACHER_CODE+'')" style="cursor:pointer"'
+    : mode==='teacher' ? 'onclick="openTeacherCard(''+c.appId+'',''+c.name+'')" style="cursor:pointer"' : '';
 
   var footer = mode==='master'
     ? '<div class="card-footer"><div class="card-grade">'+c.grade+'학년</div></div>'
@@ -382,11 +422,7 @@ function cardHTML(c,mode){
   var codeSection = mode==='master'
     ? '<div class="card-code-section">'+
         '<div class="card-code-row">'+
-          '<input class="card-code-input" type="password" id="code-'+c.appId+'"'+
-          ' placeholder="마스터 코드 입력"'+
-          ' value="'+(masterCodes[c.appId]||'')+'"'+
-          ' maxlength="20"'+
-          ' onkeydown="if(event.key==='Enter')masterGo(''+c.appId+'')"/>'+
+          '<input class="card-code-input" type="password" id="code-'+c.appId+'" placeholder="마스터 코드 입력" value="'+(masterCodes[c.appId]||'')+'" maxlength="20" onkeydown="if(event.key==='Enter')masterGo(''+c.appId+'')"/>'+
           '<button class="card-code-btn" onclick="masterGo(''+c.appId+'')">접속 →</button>'+
         '</div>'+
         '<div class="card-saved-tag'+(masterCodes[c.appId]?' show':'')+'" id="saved-'+c.appId+'">✓ 코드 저장됨</div>'+
@@ -397,73 +433,43 @@ function cardHTML(c,mode){
     '<div class="card-school">'+c.school+'</div>'+
     '<div class="card-name">'+c.name+'</div>'+
     '<div class="card-teacher-row">'+teacherRow+'</div>'+
-    footer+codeSection+
-  '</div>';
+    footer+codeSection+'</div>';
 }
 
 function renderGroups(list,mode,containerId){
   var el=document.getElementById(containerId);
   var groups=groupBy(list,sortState[mode]);
   if(!Object.keys(groups).length){el.innerHTML='<div class="no-cards">표시할 반이 없습니다.</div>';return;}
-  el.innerHTML=Object.entries(groups).map(function(entry){
-    var label=entry[0], items=entry[1];
-    return '<div class="group-section">'+
-      '<div class="group-label">'+label+'</div>'+
-      '<div class="cards">'+items.map(function(c){return cardHTML(c,mode);}).join('')+'</div>'+
-    '</div>';
+  el.innerHTML=Object.entries(groups).map(function(e){
+    return '<div class="group-section"><div class="group-label">'+e[0]+'</div><div class="cards">'+e[1].map(function(c){return cardHTML(c,mode);}).join('')+'</div></div>';
   }).join('');
 }
 
 function renderManager(){renderGroups(CLASSES,'manager','manager-cards');}
 function renderTeacher(){
-  document.getElementById('teacher-btns').innerHTML=
-    TEACHERS.map(function(t){
-      return '<div class="teacher-btn'+(selectedTeacher===t?' active':'')+'" onclick="selectTeacher(''+t+'',this)">'+t+'</div>';
-    }).join('');
-  var list=selectedTeacher?CLASSES.filter(function(c){return c.teacher===selectedTeacher;}):CLASSES;
-  renderGroups(list,'teacher','teacher-cards');
+  document.getElementById('teacher-btns').innerHTML=TEACHERS.map(function(t){
+    return '<div class="teacher-btn'+(selectedTeacher===t?' active':'')+'" onclick="selectTeacher(''+t+'',this)">'+t+'</div>';
+  }).join('');
+  renderGroups(selectedTeacher?CLASSES.filter(function(c){return c.teacher===selectedTeacher;}):CLASSES,'teacher','teacher-cards');
 }
 function renderMaster(){
-  document.getElementById('teacher-manage-list').innerHTML=
-    TEACHERS.map(function(t){
-      return '<div class="teacher-tag">'+t+'<button class="teacher-tag-del" onclick="deleteTeacher(''+t+'')">×</button></div>';
-    }).join('');
+  document.getElementById('teacher-manage-list').innerHTML=TEACHERS.map(function(t){
+    return '<div class="teacher-tag">'+t+'<button class="teacher-tag-del" onclick="deleteTeacher(''+t+'')">×</button></div>';
+  }).join('');
   renderGroups(CLASSES,'master','master-cards');
 }
 function renderAll(){renderManager();renderTeacher();renderMaster();}
 
 document.getElementById('code-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
-// INIT
-auth.signInAnonymously().then(function(){
-  HUB_DOC.onSnapshot(function(snap){
-    if(snap.exists){
-      var d=snap.data();
-      CLASSES=d.classes||DEFAULT_CLASSES;
-      TEACHERS=d.teachers||DEFAULT_TEACHERS;
-      masterCodes=d.masterCodes||{};
-    } else {
-      CLASSES=DEFAULT_CLASSES;
-      TEACHERS=DEFAULT_TEACHERS;
-      masterCodes={};
-      HUB_DOC.set({classes:DEFAULT_CLASSES,teachers:DEFAULT_TEACHERS,masterCodes:{}});
-    }
-    document.getElementById('loading').style.display='none';
-    document.getElementById('main').style.display='block';
-    renderAll();
-  }, function(err){
-    console.error('Firestore 오류:', err);
-    CLASSES=DEFAULT_CLASSES; TEACHERS=DEFAULT_TEACHERS; masterCodes={};
-    document.getElementById('loading').style.display='none';
-    document.getElementById('main').style.display='block';
-    renderAll();
-  });
-}).catch(function(e){
-  console.error('Auth 오류:', e);
-  CLASSES=DEFAULT_CLASSES; TEACHERS=DEFAULT_TEACHERS; masterCodes={};
-  document.getElementById('loading').style.display='none';
-  document.getElementById('main').style.display='block';
-  renderAll();
+// 즉시 화면 표시 (Firebase 기다리지 않음)
+document.getElementById('loading').style.display='none';
+document.getElementById('main').style.display='block';
+renderAll();
+
+// Firebase는 백그라운드에서 연결 시도
+window.addEventListener('load', function(){
+  if(typeof firebase !== 'undefined') connectFirebase();
 });
 </script>
 </body>
