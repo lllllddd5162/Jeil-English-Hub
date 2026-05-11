@@ -209,7 +209,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const FB = {apiKey:"AIzaSyBaWWriu3X7iVQnglR5XcA0Mqqc736VopM",authDomain:"science-academy-13dda.firebaseapp.com",projectId:"science-academy-13dda",storageBucket:"science-academy-13dda.firebasestorage.app",messagingSenderId:"449626746191",appId:"1:449626746191:web:73885c6bb862a07655293a"};
@@ -442,23 +442,61 @@ document.getElementById('master-cards').addEventListener('change', async functio
   }
 });
 
-signInAnonymously(auth).then(()=>{
-  onSnapshot(HUB_DOC,snap=>{
-    if(snap.exists()){
-      const d=snap.data();
-      CLASSES=d.classes||DEFAULT_CLASSES;
-      TEACHERS=d.teachers||DEFAULT_TEACHERS;
-      masterCodes=d.masterCodes||{};
-    } else {
-      CLASSES=DEFAULT_CLASSES;
-      TEACHERS=DEFAULT_TEACHERS;
-      masterCodes={};
-    }
-    document.getElementById('loading').style.display='none';
-    document.getElementById('main').style.display='block';
-    renderAll();
-  });
-});
+function showMain() {
+  document.getElementById('loading').style.display='none';
+  document.getElementById('main').style.display='block';
+  renderAll();
+}
+
+async function init() {
+  try {
+    await signInAnonymously(auth);
+
+    // 타임아웃 5초 안에 못 받으면 기본값으로 표시
+    const timeout = setTimeout(() => {
+      if (document.getElementById('loading').style.display !== 'none') {
+        CLASSES = DEFAULT_CLASSES;
+        TEACHERS = DEFAULT_TEACHERS;
+        masterCodes = {};
+        showMain();
+      }
+    }, 5000);
+
+    // onSnapshot으로 실시간 구독
+    onSnapshot(HUB_DOC, snap => {
+      clearTimeout(timeout);
+      if (snap.exists()) {
+        const d = snap.data();
+        CLASSES = d.classes || DEFAULT_CLASSES;
+        TEACHERS = d.teachers || DEFAULT_TEACHERS;
+        masterCodes = d.masterCodes || {};
+      } else {
+        CLASSES = DEFAULT_CLASSES;
+        TEACHERS = DEFAULT_TEACHERS;
+        masterCodes = {};
+        // Firebase에 기본값 저장
+        setDoc(HUB_DOC, { classes: DEFAULT_CLASSES, teachers: DEFAULT_TEACHERS, masterCodes: {} });
+      }
+      showMain();
+    }, err => {
+      // 보안 규칙 등으로 실패 시 기본값으로 표시
+      clearTimeout(timeout);
+      console.warn('Firebase 읽기 실패, 기본값 사용:', err);
+      CLASSES = DEFAULT_CLASSES;
+      TEACHERS = DEFAULT_TEACHERS;
+      masterCodes = {};
+      showMain();
+    });
+  } catch(e) {
+    console.error('초기화 실패:', e);
+    CLASSES = DEFAULT_CLASSES;
+    TEACHERS = DEFAULT_TEACHERS;
+    masterCodes = {};
+    showMain();
+  }
+}
+
+init();
 </script>
 </body>
 </html>
