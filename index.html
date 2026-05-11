@@ -292,6 +292,15 @@ var TEACHER_CODE = '26350';
 var LS_KEY = 'jeil_hub_v3';
 
 var DEFAULT_CLASSES = [
+  {name:'경일고 1학년',school:'경일고',grade:1,teacher:'이성규',appId:'Jeil-english-Kyungil-grade1'},
+  {name:'금호고 1학년',school:'금호고',grade:1,teacher:'박동혁',appId:'Jeil-english-Geumo-grade1'},
+  {name:'금호고 2학년',school:'금호고',grade:2,teacher:'이성규',appId:'Jeil-english-Geumo-grade2'},
+  {name:'금호고 3학년',school:'금호고',grade:3,teacher:'장지호',appId:'Jeil-english-Geumo-grade3'},
+  {name:'도선고 1학년',school:'도선고',grade:1,teacher:'최주성',appId:'Jeil-english-Dosun-grade1'},
+  {name:'도선고 2학년',school:'도선고',grade:2,teacher:'박민우',appId:'Jeil-english-Dosun-grade2'},
+  {name:'도선고 3학년',school:'도선고',grade:3,teacher:'신채리',appId:'Jeil-english-Dosun-grade3'},
+  {name:'무학여고 1학년',school:'무학여고',grade:1,teacher:'이성규',appId:'Jeil-english-Muhak-grade1'},
+  {name:'무학여고 2학년',school:'무학여고',grade:2,teacher:'박민우',appId:'Jeil-english-Muhak-grade2'},
   {name:'성동고 1S반',school:'성동고',grade:1,teacher:'박동혁',appId:'Jeil-english-Seongdong-grade1S'},
   {name:'성동고 1H반',school:'성동고',grade:1,teacher:'최주성',appId:'Jeil-english-Seongdong-grade1H'},
   {name:'성동고 2S반',school:'성동고',grade:2,teacher:'박동혁',appId:'Jeil-english-Seongdong-grade2S'},
@@ -301,15 +310,6 @@ var DEFAULT_CLASSES = [
   {name:'성수고 1학년',school:'성수고',grade:1,teacher:'박민우',appId:'Jeil-english-Seongsoo-grade1'},
   {name:'성수고 2학년',school:'성수고',grade:2,teacher:'박동혁',appId:'Jeil-english-Seongsoo-grade2'},
   {name:'성수고 3학년',school:'성수고',grade:3,teacher:'신채리',appId:'Jeil-english-Seongsoo-grade3'},
-  {name:'금호고 1학년',school:'금호고',grade:1,teacher:'박동혁',appId:'Jeil-english-Geumo-grade1'},
-  {name:'금호고 2학년',school:'금호고',grade:2,teacher:'이성규',appId:'Jeil-english-Geumo-grade2'},
-  {name:'금호고 3학년',school:'금호고',grade:3,teacher:'장지호',appId:'Jeil-english-Geumo-grade3'},
-  {name:'도선고 1학년',school:'도선고',grade:1,teacher:'최주성',appId:'Jeil-english-Dosun-grade1'},
-  {name:'도선고 2학년',school:'도선고',grade:2,teacher:'박민우',appId:'Jeil-english-Dosun-grade2'},
-  {name:'도선고 3학년',school:'도선고',grade:3,teacher:'신채리',appId:'Jeil-english-Dosun-grade3'},
-  {name:'무학여고 1학년',school:'무학여고',grade:1,teacher:'이성규',appId:'Jeil-english-Muhak-grade1'},
-  {name:'무학여고 2학년',school:'무학여고',grade:2,teacher:'박민우',appId:'Jeil-english-Muhak-grade2'},
-  {name:'경일고 1학년',school:'경일고',grade:1,teacher:'이성규',appId:'Jeil-english-Kyungil-grade1'},
 ];
 var DEFAULT_TEACHERS = ['박동혁','박민우','신채리','이성규','장지호','최주성'];
 
@@ -723,32 +723,59 @@ function dismissNotif(id) {
 // Firebase에서 시험 성적 실시간 감지 (새 점수 입력 시 알림)
 function watchScores() {
   if (!db) return;
-  var FB_PATH = 'artifacts/Jeil-english-Seongdong-grade1S/public/data/hub/config';
 
-  // 모든 반의 testScores 감지
   CLASSES.forEach(function(cls) {
     try {
-      var prevScores = {};
-      db.collection('artifacts/' + cls.appId + '/public/data/testScores')
-        .onSnapshot(function(snap) {
-          snap.docChanges().forEach(function(change) {
-            if (change.type === 'modified' || change.type === 'added') {
-              var data = change.doc.data();
-              var prev = prevScores[change.doc.id];
-              // 새 점수가 기입됐을 때만 (이전에 없거나 달라진 경우)
-              if (data.score != null && !data.absent && (!prev || prev.score !== data.score)) {
-                // 학생 이름 찾기
-                var parts = change.doc.id.split('-');
-                var studentId = parts[0];
-                showNotif(
-                  cls.name + ' · 새 성적 입력',
-                  '점수: ' + data.score + '점'
-                );
-              }
-              prevScores[change.doc.id] = data;
-            }
-          });
-        }, function() {});
+      // 해당 반 학생 목록 먼저 로드
+      db.collection('artifacts/' + cls.appId + '/public/data/students').get()
+        .then(function(studentSnap) {
+          var students = studentSnap.docs.map(function(d) { return d.id; });
+          if (!students.length) return;
+
+          // 시험 목록 로드
+          db.collection('artifacts/' + cls.appId + '/public/data/tests').get()
+            .then(function(testSnap) {
+              var tests = testSnap.docs.map(function(d) { return {id: d.id, title: d.data().title || '', date: d.data().date || ''}; });
+              if (!tests.length) return;
+
+              // 이미 알림 보낸 시험 추적 (세션 동안)
+              var notifiedTests = {};
+
+              // testScores 실시간 감지
+              db.collection('artifacts/' + cls.appId + '/public/data/testScores')
+                .onSnapshot(function(snap) {
+                  // 현재 점수 맵 구성
+                  var scoreMap = {};
+                  snap.docs.forEach(function(d) { scoreMap[d.id] = d.data(); });
+
+                  // 각 시험별로 전원 입력 완료 여부 확인
+                  tests.forEach(function(t) {
+                    if (notifiedTests[t.id]) return; // 이미 알림 보낸 시험
+
+                    var completed = students.filter(function(sid) {
+                      var key = sid + '-' + t.id;
+                      var r = scoreMap[key] || {};
+                      // 점수 입력됐거나 결시/비대상 처리됐으면 완료
+                      return r.score != null || r.absent === 'absent' || r.absent === 'excluded';
+                    });
+
+                    if (completed.length === students.length) {
+                      notifiedTests[t.id] = true;
+                      var validScores = students.map(function(sid) {
+                        var r = scoreMap[sid + '-' + t.id] || {};
+                        return r.absent ? null : (r.score != null ? parseFloat(r.score) : null);
+                      }).filter(function(v) { return v != null && !isNaN(v); });
+                      var avg = validScores.length ? (validScores.reduce(function(a,b){return a+b;},0)/validScores.length).toFixed(1) : '-';
+
+                      showNotif(
+                        cls.name + ' · ' + t.title,
+                        '성적 입력 완료 · ' + t.date + ' · 평균 ' + avg + '점'
+                      );
+                    }
+                  });
+                }, function() {});
+            }).catch(function(){});
+        }).catch(function(){});
     } catch(e) {}
   });
 }
