@@ -61,7 +61,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
 /* CARDS */
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);padding:18px 20px;transition:all .25s;position:relative;overflow:hidden;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);padding:18px 20px;transition:all .25s;position:relative;overflow:visible;}
 .card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(59,130,246,.06),rgba(99,102,241,.03));opacity:0;transition:opacity .25s;}
 .card:hover{border-color:rgba(59,130,246,.4);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4);}
 .card:hover::before{opacity:1;}
@@ -138,9 +138,9 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .teacher-picker-btn .arrow{font-size:10px;color:var(--text3);transition:transform .2s;}
 .teacher-picker-btn.open .arrow{transform:rotate(180deg);}
 .teacher-picker-list{
-  position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:999;
+  position:fixed;z-index:9999;min-width:160px;
   background:var(--surface);border:1px solid var(--border);border-radius:12px;
-  overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.5);
+  overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.6);
   display:none;
 }
 .teacher-picker-list.show{display:block;}
@@ -511,6 +511,11 @@ document.addEventListener('click', function(e){
     document.querySelectorAll('.teacher-picker-list').forEach(function(l){l.classList.remove('show');});
     document.querySelectorAll('.teacher-picker-btn').forEach(function(b){b.classList.remove('open');});
     if(!isOpen){
+      // 버튼 위치 계산해서 fixed 포지션 설정
+      var rect = btn.getBoundingClientRect();
+      list.style.top = (rect.bottom + 6) + 'px';
+      list.style.left = rect.left + 'px';
+      list.style.width = rect.width + 'px';
       list.classList.add('show');
       btn.classList.add('open');
     }
