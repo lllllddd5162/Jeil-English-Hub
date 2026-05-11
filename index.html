@@ -117,12 +117,22 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .data-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
 .data-modal-overlay.show{opacity:1;pointer-events:all;}
 .data-modal{background:var(--surface);border:1px solid var(--border);border-radius:24px;width:min(900px,96vw);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
-.data-modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.data-modal-header h2{font-size:16px;font-weight:800;color:var(--text);}
+.data-modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.data-modal-header h2{font-size:15px;font-weight:800;color:var(--text);}
 .data-modal-close{background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;padding:0;line-height:1;font-family:'Pretendard',sans-serif;}
 .data-modal-body{display:flex;flex:1;overflow:hidden;}
 /* 반 목록 사이드 */
-.data-class-list{width:200px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:12px 8px;}
+.data-class-list{width:160px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:8px 6px;}
+/* 모바일: 세로 레이아웃 */
+@media(max-width:600px){
+  .data-modal{border-radius:20px 20px 0 0;width:100%;max-height:92vh;position:fixed;bottom:0;left:0;}
+  .data-modal-overlay{align-items:flex-end;}
+  .data-modal-body{flex-direction:column;}
+  .data-class-list{width:100%;height:auto;max-height:120px;border-right:none;border-bottom:1px solid var(--border);display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:8px;gap:6px;flex-direction:row;}
+  .data-class-item{white-space:nowrap;flex-shrink:0;padding:6px 12px;}
+  .data-class-item .item-school{display:none;}
+  .data-content{flex:1;overflow-y:auto;padding:16px;}
+}
 .data-class-item{padding:10px 12px;border-radius:12px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;transition:all .15s;margin-bottom:2px;}
 .data-class-item:hover{background:var(--surface2);color:var(--text);}
 .data-class-item.active{background:rgba(59,130,246,.15);color:var(--accent);border:1px solid rgba(59,130,246,.2);}
@@ -710,7 +720,31 @@ function renderProgressData(plans, c) {
 
   var jinDo = plans.filter(function(p){ return !p.lessonType || p.lessonType==='진도'; });
   var done = jinDo.filter(function(p){ return p.done; }).length;
+  var remaining = jinDo.length - done;
   var pct = jinDo.length ? Math.round(done/jinDo.length*100) : 0;
+
+  // 진도 종료 예상일 계산
+  // 최근 완료된 수업들의 날짜 간격 평균으로 계산
+  var estimatedEnd = '-';
+  var doneDates = jinDo.filter(function(p){return p.done&&p.date;}).map(function(p){return p.date;}).sort();
+  if (doneDates.length >= 2 && remaining > 0) {
+    // 최근 7개 완료 수업의 날짜 기준 평균 주기 계산
+    var recent = doneDates.slice(-7);
+    var first = new Date(recent[0]);
+    var last = new Date(recent[recent.length-1]);
+    var daySpan = (last-first)/(1000*60*60*24);
+    var avgInterval = daySpan / (recent.length-1); // 수업 간 평균 일수
+    if (avgInterval > 0) {
+      var today = new Date();
+      var lastDate = new Date(doneDates[doneDates.length-1]);
+      var baseDate = lastDate > today ? lastDate : today;
+      var estMs = baseDate.getTime() + (remaining * avgInterval * 1000*60*60*24);
+      var estDate = new Date(estMs);
+      estimatedEnd = estDate.getFullYear()+'.'+(estDate.getMonth()+1)+'.'+estDate.getDate();
+    }
+  } else if (remaining === 0) {
+    estimatedEnd = '완료';
+  }
 
   // 과목별 통계
   var subjectMap = {};
@@ -721,20 +755,26 @@ function renderProgressData(plans, c) {
     if (p.done) subjectMap[sub].done++;
   });
 
-  var html = '<h3 style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em;">'+c.name+' 진도 현황</h3>';
+  var html = '<h3 style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:12px;">'+c.name+' 진도 현황</h3>';
 
-  // 전체 진도율
-  html += '<div class="progress-overall">' +
+  // 전체 진도율 + 종료 예상일
+  html += '<div class="progress-overall" style="flex-wrap:wrap;gap:12px;">' +
     '<div class="progress-overall-pct">'+pct+'%</div>' +
-    '<div class="progress-bar-wrap">' +
+    '<div class="progress-bar-wrap" style="min-width:120px;">' +
       '<div class="progress-bar-label">전체 진도율 · '+done+'/'+jinDo.length+'건 완료</div>' +
       '<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:'+pct+'%"></div></div>' +
-    '</div></div>';
+    '</div>' +
+    '<div style="background:var(--surface2);border-radius:12px;padding:10px 14px;flex-shrink:0;">' +
+      '<div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px;">📅 종료 예상일</div>' +
+      '<div style="font-size:15px;font-weight:900;color:'+(estimatedEnd==='완료'?'var(--green)':'var(--accent)')+';">'+estimatedEnd+'</div>' +
+      (remaining>0?'<div style="font-size:10px;color:var(--text3);margin-top:2px;">잔여 '+remaining+'건</div>':'') +
+    '</div>' +
+  '</div>';
 
   // 과목별
   var subKeys = Object.keys(subjectMap);
   if (subKeys.length) {
-    html += '<div class="subject-grid">';
+    html += '<div class="subject-grid" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr));">';
     subKeys.forEach(function(sub){
       var s = subjectMap[sub];
       var sp = Math.round(s.done/s.total*100);
@@ -748,17 +788,17 @@ function renderProgressData(plans, c) {
     html += '</div>';
   }
 
-  // 최근 진도 목록
+  // 최근 진도 목록 - 모바일 친화적
   var sorted = plans.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
-  html += '<p style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">최근 수업 기록</p>';
+  html += '<p style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">수업 기록</p>';
   html += '<div class="plan-list">';
-  sorted.slice(0,20).forEach(function(p){
-    html += '<div class="plan-item">' +
-      '<span class="plan-date">'+(p.date||'-')+'</span>' +
+  sorted.slice(0,30).forEach(function(p){
+    html += '<div class="plan-item" style="flex-wrap:wrap;gap:4px;">' +
+      '<span class="plan-date" style="font-size:11px;">'+(p.date||'-')+'</span>' +
       '<span class="plan-type">'+(p.lessonType||'진도')+'</span>' +
       (p.subject ? '<span class="plan-subject">'+p.subject+'</span>' : '') +
-      '<span class="plan-unit">'+(p.unit||'-')+'</span>' +
-      (p.done ? '<span class="plan-done">✓</span>' : '') +
+      '<span class="plan-unit" style="width:100%;font-size:12px;">'+(p.unit||'-')+'</span>' +
+      (p.done ? '<span class="plan-done">✓ 완료</span>' : '<span style="font-size:10px;color:var(--text3);">미완료</span>') +
     '</div>';
   });
   html += '</div>';
@@ -772,37 +812,42 @@ function renderScoresData(tests, students, scores, c) {
   var sortedStudents = students.slice().sort(function(a,b){ return (a.sortOrder||0)-(b.sortOrder||0)||a.name.localeCompare(b.name,'ko'); });
   var sortedTests = tests.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
 
-  var html = '<h3 style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em;">'+c.name+' 시험 성적표</h3>';
-  html += '<div style="overflow-x:auto;"><table class="score-table"><thead><tr>' +
-    '<th>학생</th>';
-  sortedTests.forEach(function(t){
-    html += '<th>'+t.title+'<br><span style="font-weight:400;text-transform:none;letter-spacing:0;">'+t.date+(t.maxScore?' · '+t.maxScore+'점':'')+'</span></th>';
-  });
-  html += '<th>평균</th></tr></thead><tbody>';
+  var html = '<h3 style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:12px;">'+c.name+' 시험 성적표</h3>';
 
+  // 모바일: 학생별 카드형 / 데스크탑: 테이블형
+  html += '<div class="score-mobile-cards">';
   sortedStudents.forEach(function(s){
-    var scoreVals = [];
-    html += '<tr><td style="font-weight:700;color:var(--text);">'+s.name+'</td>';
+    html += '<div style="background:var(--surface2);border-radius:14px;padding:14px 16px;margin-bottom:10px;">' +
+      '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;">'+s.name+'</div>' +
+      '<div style="display:flex;flex-direction:column;gap:6px;">';
     sortedTests.forEach(function(t){
       var key = s.id+'-'+t.id;
       var res = scores[key]||{};
+      var scoreStr = '';
       if (res.absent==='absent') {
-        html += '<td><span class="score-badge" style="background:rgba(239,68,68,.1);color:#ef4444;">결시</span></td>';
+        scoreStr = '<span style="color:#ef4444;font-weight:800;">결시</span>';
       } else if (res.absent==='excluded') {
-        html += '<td><span style="color:var(--text3);font-size:11px;">-</span></td>';
+        scoreStr = '<span style="color:var(--text3);">-</span>';
       } else if (res.score!=null) {
-        scoreVals.push(res.score);
-        var pct = t.maxScore ? Math.round(res.score/t.maxScore*100) : null;
-        html += '<td style="font-weight:800;color:var(--text);">'+res.score+'점'+(pct!=null?' <span style="font-size:10px;color:var(--text3);">('+pct+'%)</span>':'')+'</td>';
+        var pct = t.maxScore ? Math.round(parseFloat(res.score)/t.maxScore*100) : null;
+        scoreStr = '<span style="font-weight:900;color:var(--text);">'+res.score+'점</span>'+
+          (t.maxScore?'<span style="font-size:10px;color:var(--text3);"> /'+t.maxScore+'점</span>':'')+
+          (pct!=null?' <span style="font-size:10px;color:var(--accent);">('+pct+'%)</span>':'');
       } else {
-        html += '<td><span style="color:var(--text3);font-size:11px;">미입력</span></td>';
+        scoreStr = '<span style="color:var(--text3);font-size:11px;">미입력</span>';
       }
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">' +
+        '<div>' +
+          '<div style="font-size:11px;font-weight:800;color:var(--text2);">'+t.title+'</div>' +
+          '<div style="font-size:10px;color:var(--text3);">'+t.date+(t.maxScore?' · 만점 '+t.maxScore+'점':'')+'</div>' +
+        '</div>' +
+        '<div style="text-align:right;">'+scoreStr+'</div>' +
+      '</div>';
     });
-    var avg = scoreVals.length ? (scoreVals.reduce(function(a,b){return a+b;},0)/scoreVals.length).toFixed(1) : '-';
-    html += '<td style="font-weight:900;color:var(--accent);">'+avg+'</td></tr>';
+    html += '</div></div>';
   });
+  html += '</div>';
 
-  html += '</tbody></table></div>';
   content.innerHTML = html;
 }
 
