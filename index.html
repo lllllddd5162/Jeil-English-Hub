@@ -167,6 +167,10 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 @media(max-width:600px){.cards{grid-template-columns:1fr 1fr;}}
 @media(max-width:400px){.cards{grid-template-columns:1fr;}}
 </style>
+<!-- Firebase compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -656,44 +660,48 @@ function renderDataClassList() {
 
 // Firebase에서 반 데이터 로드
 function loadClassData(c) {
-  var content = document.getElementById('data-content');
-  content.innerHTML = '<div class="data-loading">⏳ 데이터 불러오는 중...</div>';
+  var contentEl = document.getElementById('data-content');
+  contentEl.innerHTML = '<div class="data-loading">⏳ 데이터 불러오는 중...</div>';
   var basePath = 'artifacts/'+c.appId+'/public/data/';
-  var fbDb = db || (function(){
-    try {
-      var FB = {apiKey:'AIzaSyBaWWriu3X7iVQnglR5XcA0Mqqc736VopM',authDomain:'science-academy-13dda.firebaseapp.com',projectId:'science-academy-13dda',storageBucket:'science-academy-13dda.firebasestorage.app',messagingSenderId:'449626746191',appId:'1:449626746191:web:73885c6bb862a07655293a'};
-      if (!firebase.apps.length) firebase.initializeApp(FB);
-      db = firebase.firestore();
-      return db;
-    } catch(e) { return null; }
-  })();
 
-  if (!fbDb) { content.innerHTML = '<div class="data-empty">Firebase 연결 실패</div>'; return; }
+  // Firebase 초기화
+  var FB = {apiKey:'AIzaSyBaWWriu3X7iVQnglR5XcA0Mqqc736VopM',authDomain:'science-academy-13dda.firebaseapp.com',projectId:'science-academy-13dda',storageBucket:'science-academy-13dda.firebasestorage.app',messagingSenderId:'449626746191',appId:'1:449626746191:web:73885c6bb862a07655293a'};
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FB);
+    db = firebase.firestore();
+  } catch(e) {}
 
-  if (dataModalMode === 'progress') {
-    Promise.all([
-      fbDb.collection(basePath+'progressPlans').get(),
-    ]).then(function(results) {
-      var plans = results[0].docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
-      renderProgressData(plans, c);
-    }).catch(function(e) {
-      content.innerHTML = '<div class="data-empty">데이터를 불러올 수 없습니다.<br><small>'+e.message+'</small></div>';
-    });
-  } else {
-    Promise.all([
-      fbDb.collection(basePath+'tests').get(),
-      fbDb.collection(basePath+'students').get(),
-      fbDb.collection(basePath+'testScores').get(),
-    ]).then(function(results) {
-      var tests = results[0].docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
-      var students = results[1].docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
-      var scores = {};
-      results[2].docs.forEach(function(d){ scores[d.id]=d.data(); });
-      renderScoresData(tests, students, scores, c);
-    }).catch(function(e) {
-      content.innerHTML = '<div class="data-empty">데이터를 불러올 수 없습니다.<br><small>'+e.message+'</small></div>';
-    });
-  }
+  var fbDb = db;
+  if (!fbDb) { contentEl.innerHTML = '<div class="data-empty">Firebase 연결 실패</div>'; return; }
+
+  // 익명 로그인 후 데이터 로드
+  firebase.auth().signInAnonymously().then(function(){
+
+    if (dataModalMode === 'progress') {
+      fbDb.collection(basePath+'progressPlans').get().then(function(snap) {
+        var plans = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+        renderProgressData(plans, c);
+      }).catch(function(e) {
+        contentEl.innerHTML = '<div class="data-empty">데이터를 불러올 수 없습니다.<br><small>'+e.message+'</small></div>';
+      });
+    } else {
+      Promise.all([
+        fbDb.collection(basePath+'tests').get(),
+        fbDb.collection(basePath+'students').get(),
+        fbDb.collection(basePath+'testScores').get(),
+      ]).then(function(results) {
+        var tests = results[0].docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+        var students = results[1].docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+        var scores = {};
+        results[2].docs.forEach(function(d){ scores[d.id]=d.data(); });
+        renderScoresData(tests, students, scores, c);
+      }).catch(function(e) {
+        contentEl.innerHTML = '<div class="data-empty">데이터를 불러올 수 없습니다.<br><small>'+e.message+'</small></div>';
+      });
+    }
+  }).catch(function(e){
+    contentEl.innerHTML = '<div class="data-empty">인증 실패: '+e.message+'</div>';
+  });
 }
 
 function renderProgressData(plans, c) {
