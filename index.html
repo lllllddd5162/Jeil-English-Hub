@@ -362,18 +362,10 @@ function changeTeacher(appId,newTeacher){
   CLASSES[idx]=Object.assign({},CLASSES[idx],{teacher:newTeacher});
   save();
 }
-function openSite(url){ window.open(url,'_blank'); }
-function masterGo(appId){
-  var input=document.getElementById('code-'+appId);
-  var code=input?input.value.trim():'';
-  if(!code){if(input)input.focus();return;}
-  masterCodes[appId]=code;
-  save();
-  var saved=document.getElementById('saved-'+appId);
-  if(saved) saved.classList.add('show');
-  window.open(BASE_URL+appId+'/?code='+code,'_blank');
-}
-function openTeacherCard(appId,name){
+function openSite(el){ window.open(el.dataset.url,'_blank'); }
+// masterGo → 이벤트 위임으로 처리
+function openTeacherCard(el){
+  var appId=el.dataset.appid, name=el.dataset.name;
   modalTarget=appId;
   document.getElementById('modal-title').textContent=name;
   document.getElementById('modal-input').value=masterCodes[appId]||'';
@@ -406,14 +398,19 @@ function deleteTeacher(name){
 }
 
 function cardHTML(c,mode){
+  var opts = TEACHERS.map(function(t){
+    return '<option'+(t===c.teacher?' selected':'')+'>'+t+'</option>';
+  }).join('');
+
   var teacherRow = mode==='master'
-    ? '<select class="teacher-select" onchange="changeTeacher(''+c.appId+'',this.value)">'+
-      TEACHERS.map(function(t){return '<option'+(t===c.teacher?' selected':'')+'>'+t+'</option>';}).join('')+'</select>'
+    ? '<select class="teacher-select" data-appid="'+c.appId+'">'+opts+'</select>'
     : '<span class="card-teacher">'+c.teacher+' 선생님</span>';
 
   var clickAttr = mode==='manager'
-    ? 'onclick="openSite(''+BASE_URL+c.appId+'/?code='+TEACHER_CODE+'')" style="cursor:pointer"'
-    : mode==='teacher' ? 'onclick="openTeacherCard(''+c.appId+'',''+c.name+'')" style="cursor:pointer"' : '';
+    ? 'onclick="openSite(this)" data-url="'+BASE_URL+c.appId+'/?code='+TEACHER_CODE+'" style="cursor:pointer"'
+    : mode==='teacher'
+    ? 'onclick="openTeacherCard(this)" data-appid="'+c.appId+'" data-name="'+c.name+'" style="cursor:pointer"'
+    : '';
 
   var footer = mode==='master'
     ? '<div class="card-footer"><div class="card-grade">'+c.grade+'학년</div></div>'
@@ -422,8 +419,8 @@ function cardHTML(c,mode){
   var codeSection = mode==='master'
     ? '<div class="card-code-section">'+
         '<div class="card-code-row">'+
-          '<input class="card-code-input" type="password" id="code-'+c.appId+'" placeholder="마스터 코드 입력" value="'+(masterCodes[c.appId]||'')+'" maxlength="20" onkeydown="if(event.key==='Enter')masterGo(''+c.appId+'')"/>'+
-          '<button class="card-code-btn" onclick="masterGo(''+c.appId+'')">접속 →</button>'+
+          '<input class="card-code-input" type="password" id="code-'+c.appId+'" placeholder="마스터 코드 입력" value="'+(masterCodes[c.appId]||'')+'" maxlength="20" data-appid="'+c.appId+'"/>'+
+          '<button class="card-code-btn" data-appid="'+c.appId+'">접속 →</button>'+
         '</div>'+
         '<div class="card-saved-tag'+(masterCodes[c.appId]?' show':'')+'" id="saved-'+c.appId+'">✓ 코드 저장됨</div>'+
       '</div>'
@@ -435,7 +432,6 @@ function cardHTML(c,mode){
     '<div class="card-teacher-row">'+teacherRow+'</div>'+
     footer+codeSection+'</div>';
 }
-
 function renderGroups(list,mode,containerId){
   var el=document.getElementById(containerId);
   var groups=groupBy(list,sortState[mode]);
@@ -460,6 +456,39 @@ function renderMaster(){
 }
 function renderAll(){renderManager();renderTeacher();renderMaster();}
 
+// 이벤트 위임으로 모든 클릭/변경 처리
+document.addEventListener('change', function(e){
+  // 선생님 드롭다운 변경
+  if(e.target.classList.contains('teacher-select')){
+    var appId = e.target.dataset.appid;
+    var newTeacher = e.target.value;
+    if(!appId||!newTeacher) return;
+    var idx = CLASSES.findIndex(function(c){return c.appId===appId;});
+    if(idx<0) return;
+    CLASSES[idx] = Object.assign({},CLASSES[idx],{teacher:newTeacher});
+    save();
+  }
+  // 마스터 코드 입력
+  if(e.target.classList.contains('card-code-input')){
+    var appId = e.target.dataset.appid;
+    if(appId) masterCodes[appId] = e.target.value;
+  }
+});
+document.addEventListener('click', function(e){
+  // 접속 버튼
+  var btn = e.target.closest('.card-code-btn');
+  if(btn){
+    var appId = btn.dataset.appid;
+    var input = document.getElementById('code-'+appId);
+    var code = input?input.value.trim():'';
+    if(!code){if(input)input.focus();return;}
+    masterCodes[appId]=code;
+    save();
+    var saved=document.getElementById('saved-'+appId);
+    if(saved) saved.classList.add('show');
+    window.open(BASE_URL+appId+'/?code='+code,'_blank');
+  }
+});
 document.getElementById('code-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
 // 즉시 화면 표시 (Firebase 기다리지 않음)
