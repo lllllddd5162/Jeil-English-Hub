@@ -1074,9 +1074,14 @@ function renderScoresData(tests, students, scores, c) {
 
     html += '<div style="background:var(--surface2);border-radius:16px;margin-bottom:10px;overflow:hidden;">';
     // 헤더
+    var diffColor = {'최하':'#3b82f6','하':'#0ea5e9','중하':'#14b8a6','중':'#64748b','중상':'#f59e0b','상':'#f97316','최상':'#ef4444'};
+    var diffBg = {'최하':'rgba(59,130,246,.1)','하':'rgba(14,165,233,.1)','중하':'rgba(20,184,166,.1)','중':'rgba(100,116,139,.1)','중상':'rgba(245,158,11,.1)','상':'rgba(249,115,22,.1)','최상':'rgba(239,68,68,.1)'};
+    var diffBadge = t.difficulty
+      ? '<span style="display:inline-block;padding:2px 7px;border-radius:100px;font-size:10px;font-weight:800;background:'+(diffBg[t.difficulty]||'rgba(100,116,139,.1)')+';color:'+(diffColor[t.difficulty]||'#64748b')+';margin-left:6px;">'+t.difficulty+'</span>'
+      : '';
     html += '<div class="test-card-header" data-tid="'+t.id+'" style="padding:14px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
       '<div style="flex:1;min-width:0;">' +
-        '<div style="font-size:14px;font-weight:800;color:var(--text);">'+t.title+'</div>' +
+        '<div style="font-size:14px;font-weight:800;color:var(--text);display:flex;align-items:center;flex-wrap:wrap;gap:4px;">'+t.title+diffBadge+'</div>' +
         '<div style="font-size:10px;color:var(--text3);margin-top:2px;">'+t.date+(t.maxScore?' · 만점 '+t.maxScore+'점':'')+(t.testType?' · '+t.testType:'')+'</div>' +
         '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-top:3px;">반 평균 '+(avg!=null?avg.toFixed(1)+'점':'데이터 없음')+(validScores.length?' · '+validScores.length+'명':'')+'</div>' +
       '</div>' +
