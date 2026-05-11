@@ -112,11 +112,22 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
 .no-cards{text-align:center;padding:48px;color:var(--text3);font-size:14px;}
 .footer{text-align:center;padding:40px 0 0;color:var(--text3);font-size:12px;line-height:2;}
+/* 알림 토스트 */
+.notif-container{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:320px;}
+.notif-toast{background:var(--surface);border:1px solid var(--accent);border-radius:14px;padding:12px 16px;box-shadow:0 8px 24px rgba(0,0,0,.5);animation:slideIn .3s ease;display:flex;align-items:flex-start;gap:10px;}
+@keyframes slideIn{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+@keyframes slideOut{from{transform:translateX(0);opacity:1;}to{transform:translateX(120%);opacity:0;}}
+.notif-toast.out{animation:slideOut .3s ease forwards;}
+.notif-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
+.notif-body{flex:1;min-width:0;}
+.notif-title{font-size:12px;font-weight:800;color:var(--accent);margin-bottom:3px;}
+.notif-msg{font-size:11px;color:var(--text2);font-weight:600;line-height:1.4;}
+.notif-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0;line-height:1;flex-shrink:0;}
 
 /* 데이터 뷰어 모달 */
 .data-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
 .data-modal-overlay.show{opacity:1;pointer-events:all;}
-.data-modal{background:var(--surface);border:1px solid var(--border);border-radius:24px;width:min(900px,96vw);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
+.data-modal{background:var(--surface);border:1px solid var(--border);border-radius:24px;width:min(1000px,98vw);height:88vh;display:flex;flex-direction:column;overflow:hidden;}
 .data-modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .data-modal-header h2{font-size:15px;font-weight:800;color:var(--text);}
 .data-modal-close{background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;padding:0;line-height:1;font-family:'Pretendard',sans-serif;}
@@ -125,7 +136,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .data-class-list{width:160px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:8px 6px;}
 /* 모바일: 세로 레이아웃 */
 @media(max-width:600px){
-  .data-modal{border-radius:20px 20px 0 0;width:100%;max-height:92vh;position:fixed;bottom:0;left:0;}
+  .data-modal{border-radius:20px 20px 0 0;width:100%;height:96vh;position:fixed;bottom:0;left:0;}
   .data-modal-overlay{align-items:flex-end;}
   .data-modal-body{flex-direction:column;}
   .data-class-list{width:100%;height:auto;max-height:120px;border-right:none;border-bottom:1px solid var(--border);display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:8px;gap:6px;flex-direction:row;}
@@ -566,6 +577,12 @@ document.getElementById('code-modal').addEventListener('click', function(e){
 
 // 데이터 모달 이벤트 위임 (진도/성적 필터 + 시험카드 토글)
 document.addEventListener('click', function(e) {
+  // 알림 닫기
+  var notifClose = e.target.closest('.notif-close');
+  if (notifClose && notifClose.dataset.notifId) {
+    dismissNotif(notifClose.dataset.notifId);
+    return;
+  }
   // 진도 과목 필터
   var subBtn = e.target.closest('.prog-sub-btn');
   if (subBtn) {
@@ -676,6 +693,73 @@ document.addEventListener('click', function(e){
 
 // 즉시 렌더링
 renderAll();
+
+// ============================================================
+// 알림 시스템
+// ============================================================
+function showNotif(title, msg) {
+  var container = document.getElementById('notif-container');
+  var id = 'n' + Date.now();
+  var el = document.createElement('div');
+  el.className = 'notif-toast';
+  el.id = id;
+  el.innerHTML = '<span class="notif-icon">🏆</span>' +
+    '<div class="notif-body">' +
+      '<div class="notif-title">' + title + '</div>' +
+      '<div class="notif-msg">' + msg + '</div>' +
+    '</div>' +
+    '<button class="notif-close" data-notif-id="' + id + '">×</button>';
+  container.appendChild(el);
+  // 5초 후 자동 제거
+  setTimeout(function() { dismissNotif(id); }, 5000);
+}
+function dismissNotif(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('out');
+  setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
+}
+
+// Firebase에서 시험 성적 실시간 감지 (새 점수 입력 시 알림)
+function watchScores() {
+  if (!db) return;
+  var FB_PATH = 'artifacts/Jeil-english-Seongdong-grade1S/public/data/hub/config';
+
+  // 모든 반의 testScores 감지
+  CLASSES.forEach(function(cls) {
+    try {
+      var prevScores = {};
+      db.collection('artifacts/' + cls.appId + '/public/data/testScores')
+        .onSnapshot(function(snap) {
+          snap.docChanges().forEach(function(change) {
+            if (change.type === 'modified' || change.type === 'added') {
+              var data = change.doc.data();
+              var prev = prevScores[change.doc.id];
+              // 새 점수가 기입됐을 때만 (이전에 없거나 달라진 경우)
+              if (data.score != null && !data.absent && (!prev || prev.score !== data.score)) {
+                // 학생 이름 찾기
+                var parts = change.doc.id.split('-');
+                var studentId = parts[0];
+                showNotif(
+                  cls.name + ' · 새 성적 입력',
+                  '점수: ' + data.score + '점'
+                );
+              }
+              prevScores[change.doc.id] = data;
+            }
+          });
+        }, function() {});
+    } catch(e) {}
+  });
+}
+
+// Firebase 연결 후 성적 감지 시작
+window.addEventListener('load', function(){
+  if (typeof firebase !== 'undefined') {
+    fbConnect();
+    setTimeout(watchScores, 3000); // 연결 후 3초 뒤 감지 시작
+  }
+});
 
 // =============================================
 // 데이터 뷰어 (진도 현황 / 시험 성적표)
@@ -1049,10 +1133,8 @@ document.getElementById('data-class-list').addEventListener('click', function(e)
   if (dataSelectedClass) loadClassData(dataSelectedClass);
 });
 
-// Firebase 백그라운드 연결
-window.addEventListener('load', function(){
-  if (typeof firebase !== 'undefined') fbConnect();
-});
+// Firebase 백그라운드 연결은 위 알림 시스템에서 처리
 </script>
+<div class="notif-container" id="notif-container"></div>
 </body>
 </html>
